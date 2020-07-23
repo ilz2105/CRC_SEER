@@ -73,8 +73,8 @@ white_inc
 ```
 
 ```{r  echo=FALSE}
-mean_wgts = read.csv("./rf_wghts.csv")
-mean_wgts = mean_wgts %>% 
+mean_wgtsx = read.csv("./rf_wghts.csv")
+mean_wgts = mean_wgtsx %>% 
   mutate(
     gender = as.factor(gender),
     race = as.factor(race),
@@ -101,10 +101,6 @@ mean_wgts = mean_wgts %>%
     alc_freq..2_Mean = as.numeric(as.character(alc_freq..2_Mean)),
     alc_freq..1_Mean = as.numeric(as.character(alc_freq..1_Mean)),
      alc_freq..0_Mean = as.numeric(as.character(alc_freq..0_Mean)),
-    avg_drinks_pday_pstyr.1_Mean = as.numeric(as.character(avg_drinks_pday_pstyr.1_Mean)),
-    avg_drinks_pday_pstyr.2_Mean = as.numeric(as.character(avg_drinks_pday_pstyr.2_Mean)),
-    avg_drinks_pday_pstyr.3_Mean = as.numeric(as.character(avg_drinks_pday_pstyr.3_Mean)),
-    avg_drinks_pday_pstyr.4_Mean = as.numeric(as.character(avg_drinks_pday_pstyr.4_Mean)),
     age_grp = as.factor( age_grp)
   ) %>% 
   drop_na()
@@ -174,7 +170,7 @@ alc_freq_5 = mean_wgts%>%
    geom_line(aes(color = age_grp )) + 
   facet_wrap(~race+gender)+
   labs(
- title = "weighted means for alcohol frequency 5 by race & gender",
+ title = "weighted means for alcohol frequency (5 = blank but a) by race & gender",
     x = "Periods (5-year groups)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -186,7 +182,7 @@ alc_freq_4 = mean_wgts%>%
    geom_line(aes(color = age_grp )) + 
   facet_wrap(~race+gender)+
   labs(
- title = "weighted means for alcohol frequency 4 by race & gender",
+ title = "weighted means for alcohol frequency (4 = everyday) by race & gender",
     x = "Periods (5-year groups)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -197,7 +193,7 @@ alc_freq_3 = mean_wgts%>%
    geom_line(aes(color = age_grp )) + 
   facet_wrap(~race+gender)+
   labs(
- title = "weighted means for alcohol frequency 3 by race and gender",
+ title = "weighted means for alcohol frequency (3= 2-3x per week) by race and gender",
     x = "Periods (5-year groups)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -208,7 +204,7 @@ alc_freq_2 = mean_wgts%>%
    geom_line(aes(color = age_grp )) + 
   facet_wrap(~race+gender)+
   labs(
- title = "weighted means for alcohol frequency 2 by race and gender",
+ title = "weighted means for alcohol frequency (2 = 1-4x per month) by race and gender",
     x = "Periods (5-year groups)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -219,7 +215,7 @@ alc_freq_1 = mean_wgts%>%
    geom_line(aes(color = age_grp )) + 
   facet_wrap(~race+gender)+
   labs(
- title = "weighted means for alcohol frequency 1 by race and gender",
+ title = "weighted means for alcohol frequency (1 = 3-12x per yr) by race and gender",
     x = "Periods (5-year groups)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -229,7 +225,7 @@ alc_freq_0 = mean_wgts%>%
    geom_line(aes(color = age_grp )) + 
   facet_wrap(~race+gender)+
   labs(
- title = "weighted means for alcohol frequency (none) by race and gender",
+ title = "weighted means for alcohol frequency (0 = none/less than 2-3x per yr) by race and gender",
     x = "Periods (5-year groups)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -241,5 +237,150 @@ alc_freq_3
 alc_freq_4
 alc_freq_5
 
+#mean_wgts %>% filter(race == "Black", gender == "Female", age_grp == "45-49 year olds")
+
+```
+
+
+```{r avg.drinks., echo=FALSE}
+mean_wgtsx = read.csv("./rf_wghts.csv")
+mean_wgtsx = mean_wgtsx %>% 
+  mutate(
+    gender = as.factor(gender),
+    race = as.factor(race),
+    race = dplyr::recode(race, 
+                  `1` = "Black",
+                  `0`  = "White", 
+                  `2` = "Other"),
+    gender = dplyr::recode(gender, 
+                    `0` = "Male",
+                    `1` = "Female"),
+     age_grp = as.factor(age_grp),
+    age_grp = dplyr::recode(age_grp,
+                            `0` = "25-29 year olds",
+                            `1` = "30-34 year olds",
+                            `2` = "35-39 year olds",
+                            `3` = "40-44 year olds",
+                            `4` = "45-49 year olds")
+  ) %>% 
+  filter(
+    race == c("Black", "White")
+  )
+
+avg_drnks_1 = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = avg_drinks_pday_pstyr.1_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for average drinks per day in the past year (1-2x) by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+avg_drnks_2 = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = avg_drinks_pday_pstyr.2_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for average drinks per day in the past year (3-5x) by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+avg_drnks_3 = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = avg_drinks_pday_pstyr.3_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for average drinks per day in the past year (6-9x) by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+avg_drnks_4 = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = avg_drinks_pday_pstyr.4_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for average drinks per day in the past year (10+) by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+
+avg_drnks_NA = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = avg_drinks_pday_pstyr.NA_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for average drinks per day in the past year (NA) by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+avg_drnks_1
+avg_drnks_2
+avg_drnks_3
+avg_drnks_4
+avg_drnks_NA
+```
+
+
+```{r current.smoker, echo=FALSE}
+
+current_smkr_0 = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = current_smkr.0_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for current smoker (0 = no) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+current_smkr_1 = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = current_smkr.1_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for current smoker (1 = yes) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+current_smkr_2 = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = current_smkr.2_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for current smoker (2 = blank but applicable) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+current_smkr_3 = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = current_smkr.3_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for current smoker (3 = missing) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+current_smkr_NA = mean_wgtsx%>% 
+  ggplot( aes(x = period, y = current_smkr.NA_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for current smoker (NA) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+current_smkr_0
+current_smkr_1
+current_smkr_2
+current_smkr_NA
 ```
 
