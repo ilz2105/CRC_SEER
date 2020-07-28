@@ -106,6 +106,29 @@ mean_wgts = mean_wgtsx %>%
     meat_freq_pmo..1_Mean = as.numeric(as.character(meat_freq_pmo..1_Mean)),
     meat_freq_pmo..2_Mean = as.numeric(as.character(meat_freq_pmo..2_Mean)),
     meat_freq_pmo..3_Mean = as.numeric(as.character(meat_freq_pmo..3_Mean)),
+    protein..0_Mean = as.numeric(as.character(protein..0_Mean)),
+    protein..1_Mean = as.numeric(as.character(protein..1_Mean)),
+    protein..2_Mean = as.numeric(as.character(protein..2_Mean)),
+    protein..3_Mean = as.numeric(as.character(protein..3_Mean)),
+    protein..4_Mean = as.numeric(as.character(protein..4_Mean)),
+    fruits_veggies_pmo..0_ = as.numeric(as.character(fruits_veggies_pmo..0_)),
+    fruits_veggies_pmo..1_ = as.numeric(as.character(fruits_veggies_pmo..1_)),
+    fruits_veggies_pmo..2_ = as.numeric(as.character(fruits_veggies_pmo..2_)),
+    fruits_veggies_pmo..3_ = as.numeric(as.character(fruits_veggies_pmo..3_)),
+    fruits_veggies_pmo..4_ = as.numeric(as.character(fruits_veggies_pmo..4_)),
+    protein..0_Mean = as.numeric(as.character(protein..0_Mean)),
+    protein..1_Mean = as.numeric(as.character(protein..1_Mean)),
+    protein..2_Mean = as.numeric(as.character(protein..2_Mean)),
+    protein..3_Mean = as.numeric(as.character(protein..3_Mean)),
+    protein..4_Mean = as.numeric(as.character(protein..4_Mean)),
+    sat_fatty_acid.0_Mean = as.numeric(as.character(sat_fatty_acid.0_Mean)),
+    sat_fatty_acid.1_Mean = as.numeric(as.character(sat_fatty_acid.1_Mean)),
+    sat_fatty_acid.2_Mean = as.numeric(as.character(sat_fatty_acid.2_Mean)),
+    sat_fatty_acid.3_Mean = as.numeric(as.character(sat_fatty_acid.3_Mean)),
+    sat_fatty_acid.4_Mean = as.numeric(as.character(sat_fatty_acid.4_Mean)),
+    still_thyroid_d.0_Mean = as.numeric(as.character(still_thyroid_d.0_Mean)),
+    still_thyroid_d.1_Mean = as.numeric(as.character(still_thyroid_d.1_Mean)),
+    still_thyroid_d.2_Mean = as.numeric(as.character(still_thyroid_d.2_Mean)),
     age_grp = as.factor( age_grp)
   ) 
 
@@ -633,6 +656,7 @@ home_smokers_0
 home_smokers_1
 ```
 
+## meat consumed per month 
 
 ```{r meat_pmo, echo=FALSE, message=FALSE}
 meat = mean_wgts %>% 
@@ -684,6 +708,217 @@ meat_1
 meat_2
 meat_3
 ```
+```{r fruits.veggies, echo=FALSE,  message=FALSE}
+fruits_veg = mean_wgts %>% 
+  select(period, age_grp, race, gender, fruits_veggies_pmo..0_, fruits_veggies_pmo..1_, fruits_veggies_pmo..2_, fruits_veggies_pmo..3_,fruits_veggies_pmo..4_) %>% 
+  drop_na()
+
+fruits_veg_0 = fruits_veg%>% 
+  ggplot( aes(x = period, y =  fruits_veggies_pmo..0_) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for fruits & veggies consumed per month (0 = none) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+fruits_veg_1 = fruits_veg%>% 
+  ggplot( aes(x = period, y =  fruits_veggies_pmo..1_) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for fruits & veggies consumed per month (1 = less than once a week) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+fruits_veg_2 = fruits_veg%>% 
+  ggplot( aes(x = period, y =  fruits_veggies_pmo..2_) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for fruits & veggies consumed per month (2 = 1-6x a week) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+fruits_veg_3 = fruits_veg%>% 
+  ggplot( aes(x = period, y =  fruits_veggies_pmo..3_) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for fruits & veggies consumed per month (3 = 1-22x per day) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+fruits_veg_0
+fruits_veg_1
+fruits_veg_2
+fruits_veg_3
+```
+
+## protein consumed 
+
+```{r}
+protein = mean_wgts %>% 
+  select(period, age_grp, race, gender, protein..0_Mean, protein..1_Mean, protein..2_Mean, protein..3_Mean, protein..4_Mean) %>% 
+  drop_na()
+
+protein_0 = protein%>% 
+  ggplot( aes(x = period, y =  protein..0_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of protein consumed (0 = none) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+protein_1 = protein%>% 
+  ggplot( aes(x = period, y =  protein..1_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of protein consumed (1 = 1-4600g) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+protein_2 = protein%>% 
+  ggplot( aes(x = period, y =  protein..2_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of protein consumed (2 = 4501-6600g) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+protein_3 = protein%>% 
+  ggplot( aes(x = period, y =  protein..3_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of protein consumed (3 = 6601-9200g) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+protein_4 = protein%>% 
+  ggplot( aes(x = period, y =  protein..4_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of protein consumed (4 = 9201+) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+protein_0
+protein_1
+protein_2
+protein_3
+protein_4
+```
+
+
+```{r}
+sat_fat = mean_wgts %>% 
+  select(period, age_grp, race, gender, sat_fatty_acid.0_Mean, sat_fatty_acid.1_Mean, sat_fatty_acid.2_Mean, sat_fatty_acid.3_Mean,sat_fatty_acid.4_Mean ) %>% 
+  drop_na()
+
+
+sat_fat_0 = sat_fat%>% 
+  ggplot( aes(x = period, y = sat_fatty_acid.0_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of saturated fatty acid consumed (0 = 0) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+sat_fat_1 = sat_fat%>% 
+  ggplot( aes(x = period, y = sat_fatty_acid.1_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of saturated fatty acid consumed (1 = 1-1500g) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+sat_fat_2= sat_fat%>% 
+  ggplot( aes(x = period, y = sat_fatty_acid.2_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of saturated fatty acid consumed (2 = 1501-2400) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+sat_fat_3 = sat_fat%>% 
+  ggplot( aes(x = period, y = sat_fatty_acid.3_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of saturated fatty acid consumed (3 =  2401-3600g) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+
+sat_fat_4 = sat_fat%>% 
+  ggplot( aes(x = period, y = sat_fatty_acid.4_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for grams of saturated fatty acid consumed (4 = 3601+) by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+sat_fat_0
+sat_fat_1
+sat_fat_2
+sat_fat_3
+sat_fat_4
+```
+
+# still thyroid disease
+
+```{r still.thyroid.disease, echo=FALSE, message=FALSE}
+still_thyroid = mean_wgts %>% 
+  select(period, age_grp, race, gender, still_thyroid_d.0_Mean, still_thyroid_d.1_Mean ) %>% 
+  drop_na()
+
+
+still_thyroid_0 = still_thyroid%>% 
+  ggplot( aes(x = period, y = still_thyroid_d.0_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for still thyroid disease = no by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+still_thyroid_1 = still_thyroid%>% 
+  ggplot( aes(x = period, y = still_thyroid_d.1_Mean) )+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender)+
+  labs(
+ title = "weighted means for still thyroid disease = yes by race & gender",
+    x = "Periods (5-year groups from 1975-2014)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")
+
+still_thyroid_0 
+still_thyroid_1
+```
 
 
 ## continuous variables
@@ -734,7 +969,8 @@ chol_mg = diet_chol %>%
   )
 #chol_mg
 
-#aggregate(diet[,5], list(diet$period), mean)
+aggregate(diet[,5], list(diet$period), mean) %>% 
+  
 ```
 
 ```{r alc.pmo, echo=FALSE,  message=FALSE}
