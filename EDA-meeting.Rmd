@@ -31,7 +31,8 @@ seer = readxl::read_xlsx("./seer.xlsx", sheet = 2) %>%
     gender = as.factor(gender), 
     race = dplyr::recode(race, 
                   `1` = "Black",
-                  `0`  = "White"),
+                  `0`  = "White",
+                  `2` = "Other"),
     gender = dplyr::recode(gender, 
                     `0` = "Male",
                     `1` = "Female"),
@@ -42,34 +43,94 @@ seer = readxl::read_xlsx("./seer.xlsx", sheet = 2) %>%
                             `2` = "35-39 year olds",
                             `3` = "40-44 year olds",
                             `4` = "45-49 year olds")
+  #  period = as.factor(period),
+ #  period = dplyr::recode(period,
+                #           `0` = "1975-1979",
+               #          `1` = "1980-1984",
+                 #         `2` = "1985-1989",
+                  #        `3` = "1990-1994",
+                   #       `4` = "1995-1999",
+                    #      `5` = "2000-2004",
+                     #    `6` = "2005-2009",
+                      #     `7` = "2010-2014")
   )
 
 black_inc = seer %>% 
   filter(race == "Black") %>% 
   ggplot( aes(x = period, y = rate))+
    geom_line(aes(color = gender)) +
-  facet_wrap(~age_grp)+
+  facet_wrap(~age_grp, scales = "free_y")+
    labs(
     title = "CRC inc rates from 1975-2014 among Blacks",
     x = "Periods (5-year groups)",
     y = "Inc Rate of CRC",
-    caption = "by 5-year age groups (25-49)"
-  )
+    caption = "by 5-year age groups (25-49)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 white_inc = seer %>% 
   filter(race == "White") %>% 
   ggplot( aes(x = period, y = rate))+
    geom_line(aes(color = gender)) +
-  facet_wrap(~age_grp)+
+  facet_wrap(~age_grp, scales = "free_y")+
    labs(
  title = "CRC inc rates from 1975-2014 among Whites",
     x = "Periods (5-year groups)",
     y = "Inc Rate of CRC",
-    caption = "by 5-year age groups (25-49)"
-  )
+    caption = "by 5-year age groups (25-49)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+other_inc = seer %>% 
+  filter(race == "Other") %>% 
+  ggplot( aes(x = period, y = rate))+
+   geom_line(aes(color = gender)) +
+  facet_wrap(~age_grp, scales = "free_y")+
+   labs(
+ title = "CRC inc rates from 1975-2014 among Other",
+    x = "Periods (5-year groups)",
+    y = "Inc Rate of CRC",
+    caption = "by 5-year age groups (25-49)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  
+
+### add scales = free_y
+## add in others
+## compare race/ethnicity groups-look at these over time by gender
+
 
 black_inc
 white_inc
+other_inc
+
+```
+
+
+```{r inc.by.gender, echo=FALSE, message=FALSE}
+female_inc = seer %>% 
+  filter(gender == "Female") %>% 
+  ggplot( aes(x = period, y = rate))+
+   geom_line(aes(color = race)) +
+  facet_wrap(~age_grp, scales = "free_y")+
+   labs(
+    title = "CRC inc rates from 1975-2014 among Females",
+    x = "Periods (5-year groups)",
+    y = "Inc Rate of CRC",
+    caption = "by 5-year age groups (25-49)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+male_inc = seer %>% 
+  filter(gender == "Male") %>% 
+  ggplot( aes(x = period, y = rate))+
+   geom_line(aes(color = race)) +
+  facet_wrap(~age_grp, scales = "free_y")+
+   labs(
+ title = "CRC inc rates from 1975-2014 among males",
+    x = "Periods (5-year groups)",
+    y = "Inc Rate of CRC",
+    caption = "by 5-year age groups (25-49)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+female_inc
+male_inc
 ```
 
 ```{r  echo=FALSE, include=FALSE,  message=FALSE}
@@ -130,11 +191,13 @@ mean_wgts = mean_wgtsx %>%
     still_thyroid_d.1_Mean = as.numeric(as.character(still_thyroid_d.1_Mean)),
     still_thyroid_d.2_Mean = as.numeric(as.character(still_thyroid_d.2_Mean)),
     age_grp = as.factor( age_grp)
-  ) 
+  ) %>% 
+  filter(period <=7)
 
 head(mean_wgts)
 ```
 
+## activity level
 
 ```{r activity.level, echo=FALSE,  message=FALSE}
 mean_wgts_activity = mean_wgts %>% 
@@ -145,7 +208,7 @@ mean_wgts_activity = mean_wgts %>%
 act_level_0 = mean_wgts_activity%>% 
   ggplot( aes(x = period, y = activity_level..0_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender,  scales = "free_y")+
   labs(
  title = "weighted means for little to no activity level by race & gender",
     x = "Periods (5-year groups)",
@@ -157,7 +220,7 @@ act_level_0 = mean_wgts_activity%>%
 act_level_1 = mean_wgts_activity%>% 
   ggplot( aes(x = period, y = activity_level..1_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for moderate activity level by race & gender",
     x = "Periods (5-year groups)",
@@ -168,9 +231,9 @@ act_level_1 = mean_wgts_activity%>%
 act_level_2 = mean_wgts_activity%>% 
   ggplot( aes(x = period, y = activity_level..2_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
- title = "weighted means for moderate activity level by race and gender",
+ title = "weighted means for high activity level by race and gender",
     x = "Periods (5-year groups)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -179,7 +242,7 @@ act_level_2 = mean_wgts_activity%>%
 act_level_3 = mean_wgts_activity%>% 
   ggplot( aes(x = period, y = activity_level..3_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for high activity level by race and gender",
     x = "Periods (5-year groups)",
@@ -191,9 +254,11 @@ act_level_3 = mean_wgts_activity%>%
 act_level_0
 act_level_1
 act_level_2
-act_level_3
+
 
 ```
+
+## alcohol frequency
 
 ```{r alcohol, echo=FALSE,  message=FALSE}
 
@@ -209,7 +274,7 @@ alc_freq_4 = mean_wgts_alc%>%
    geom_line(aes(color = age_grp )) + 
   facet_wrap(~race+gender)+
   labs(
- title = "weighted means for alcohol frequency (4 = everyday) by race & gender",
+ title = "weighted means for alcohol frequency (4 = 7+ times a week) by race & gender",
     x = "Periods (5-year groups)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -231,7 +296,7 @@ alc_freq_2 = mean_wgts_alc%>%
    geom_line(aes(color = age_grp )) + 
   facet_wrap(~race+gender)+
   labs(
- title = "weighted means for alcohol frequency (2 = 1-4x per month) by race and gender",
+ title = "weighted means for alcohol frequency (2 = less than once or once a week) by race and gender",
     x = "Periods (5-year groups)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -263,85 +328,14 @@ alc_freq_2
 alc_freq_3
 alc_freq_4
 
-
+## means do all add up to 1
+## every day has mostly 0 because few people responded yes to drinking everyday
 #mean_wgts %>% filter(race == "Black", gender == "Female", age_grp == "45-49 year olds")
 
 ```
 
 
-```{r avg.drinks., echo=FALSE,  message=FALSE}
-mean_wgtsx = read.csv("./rf_wghts.csv")
-mean_wgtsx = mean_wgtsx %>% 
-  mutate(
-    gender = as.factor(gender),
-    race = as.factor(race),
-    race = dplyr::recode(race, 
-                  `1` = "Black",
-                  `0`  = "White", 
-                  `2` = "Other"),
-    gender = dplyr::recode(gender, 
-                    `0` = "Male",
-                    `1` = "Female"),
-     age_grp = as.factor(age_grp),
-    age_grp = dplyr::recode(age_grp,
-                            `0` = "25-29 year olds",
-                            `1` = "30-34 year olds",
-                            `2` = "35-39 year olds",
-                            `3` = "40-44 year olds",
-                            `4` = "45-49 year olds")
-  ) %>% 
-  drop_na() %>% 
-  select(period, age_grp, gender, race, avg_drinks_pday_pstyr.1_Mean, avg_drinks_pday_pstyr.2_Mean, avg_drinks_pday_pstyr.3_Mean,
-         avg_drinks_pday_pstyr.4_Mean, avg_drinks_pday_pstyr.NA_Mean)
 
-avg_drnks_1 = mean_wgtsx%>% 
-  ggplot( aes(x = period, y = avg_drinks_pday_pstyr.1_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for average drinks per day in the past year (1-2x) by race & gender",
-    x = "Periods (5-year groups)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-avg_drnks_2 = mean_wgtsx%>% 
-  ggplot( aes(x = period, y = avg_drinks_pday_pstyr.2_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for average drinks per day in the past year (3-5x) by race & gender",
-    x = "Periods (5-year groups)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-avg_drnks_3 = mean_wgtsx%>% 
-  ggplot( aes(x = period, y = avg_drinks_pday_pstyr.3_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for average drinks per day in the past year (6-9x) by race & gender",
-    x = "Periods (5-year groups)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-avg_drnks_4 = mean_wgtsx%>% 
-  ggplot( aes(x = period, y = avg_drinks_pday_pstyr.4_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for average drinks per day in the past year (10+) by race & gender",
-    x = "Periods (5-year groups)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-
-
-avg_drnks_1
-avg_drnks_2
-avg_drnks_3
-avg_drnks_4
-
-```
 
 ## current smoker, no/yes
 
@@ -396,7 +390,7 @@ current_smkr_3 = mean_wgts_smoker%>%
 
 current_smkr_0
 current_smkr_1
-current_smkr_2
+
 
 ```
 
@@ -411,7 +405,7 @@ mean_wgts_diabetes = mean_wgts %>%
 diabetes_0 = mean_wgts_diabetes%>% 
   ggplot( aes(x = period, y = diabetes..0_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for no diabetes by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -421,7 +415,7 @@ diabetes_0 = mean_wgts_diabetes%>%
 diabetes_1 = mean_wgts_diabetes%>% 
   ggplot( aes(x = period, y = diabetes..1_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for diabetes = yes by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -440,64 +434,13 @@ diabetes_2 = mean_wgts_diabetes%>%
 
 diabetes_0
 diabetes_1
-diabetes_2
+
+
+mean_wgts_diabetes %>% 
+  filter(period == 6)
 ```
-#ever had 5 or more drinks in a day
-
-```{r ever.5.or.more.drinks.pday, echo=FALSE,  message=FALSE}
-mean_wgts_ever = mean_wgts %>% 
-  select(period, age_grp, race, gender, ever_5_or_more_drinks_a_day.0_Me, ever_5_or_more_drinks_a_day.1_Me, ever_5_or_more_drinks_a_day.2_Me,
-         ever_5_or_more_drinks_a_day.3_Me, ever_5_or_more_drinks_a_day.NA_M) %>% 
-  drop_na()
-
-ever5_0 = mean_wgts_ever%>% 
-  ggplot( aes(x = period, y = ever_5_or_more_drinks_a_day.0_Me) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for ever 5 for more drinks a day (0=no) by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-ever5_1 = mean_wgts_ever%>% 
-  ggplot( aes(x = period, y = ever_5_or_more_drinks_a_day.1_Me) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for ever 5 for more drinks a day (1=yes) by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-ever5_2 = mean_wgts_ever%>% 
-  ggplot( aes(x = period, y = ever_5_or_more_drinks_a_day.2_Me) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for ever 5 for more drinks a day (2=dont know) by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-ever5_3 = mean_wgts_ever%>% 
-  ggplot( aes(x = period, y = ever_5_or_more_drinks_a_day.3_Me) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for ever 5 for more drinks a day (3 = missing) by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
 
 
-
-ever5_0
-ever5_1
-ever5_2
-ever5_3
-
-```
 
 ## thyroid disease y/n
 
@@ -510,7 +453,7 @@ thyroid = mean_wgts %>%
 thyroid_0 = thyroid%>% 
   ggplot( aes(x = period, y = thyroid_d..0_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for thyroid disease (0 = no) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -520,7 +463,7 @@ thyroid_0 = thyroid%>%
 thyroid_1 = thyroid%>% 
   ggplot( aes(x = period, y = thyroid_d..1_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for thyroid disease (1 = yes) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -535,95 +478,8 @@ thyroid_1
 ```
 
 
-```{r hepA, echo=FALSE,  message=FALSE}
-hepA = mean_wgts%>% 
-  select(period, age_grp, race, gender, hepA_vacc.0_Mean, hepA_vacc.1_Mean, hepA_vacc.2_Mean, hepA_vacc.3_Mean) %>% 
-  drop_na()
 
-hepA_0 = hepA%>% 
-  ggplot( aes(x = period, y = hepA_vacc.0_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for hepA vaccine (0 = no doses)  by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-hepA_1 = hepA%>% 
-  ggplot( aes(x = period, y = hepA_vacc.1_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for hepA vaccine (1 = less than 2 doses) by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-hepA_2 = hepA%>% 
-  ggplot( aes(x = period, y = hepA_vacc.2_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for hepA vaccine (2 = at least 2 doses)  by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-hepA_0
-hepA_1
-hepA_2
-
-
-```
-
-## hep B vaccine
-
-```{r hepB, echo= FALSE, message=FALSE}
-hepB = mean_wgts%>% 
-  select(period, age_grp, race, gender, hepB_vacc.0_Mean, hepB_vacc.1_Mean, hepB_vacc.2_Mean, hepB_vacc.3_Mean) %>% 
-  drop_na()
-
-hepB_0 = hepB%>% 
-  ggplot( aes(x = period, y = hepB_vacc.0_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for hepB vaccine (0 = no doses)  by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-hepB_1 = hepB%>% 
-  ggplot( aes(x = period, y = hepB_vacc.1_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for hepB vaccine (1 = less than 3 doses) by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-hepB_2 = hepB%>% 
-  ggplot( aes(x = period, y = hepB_vacc.2_Mean) )+
-   geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
-  labs(
- title = "weighted means for hepb vaccine (all 3 doses)  by race & gender",
-    x = "Periods (5-year groups from 1975-2014)",
-    y = "weighted mean",
-    caption = "by 5-year age groups (25-49)")
-
-
-
-hepB_0
-hepB_1
-hepB_2
-
-
-
-```
-
+## home smokers present? 
 
 ```{r home.smokers, echo=FALSE, message=FALSE}
 home_smoke = mean_wgts%>% 
@@ -635,7 +491,7 @@ head(home_smoke)
 home_smokers_0 = home_smoke%>% 
   ggplot( aes(x = period, y =  home_smokers.0_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for no home smokers by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -645,7 +501,7 @@ home_smokers_0 = home_smoke%>%
 home_smokers_1 = home_smoke%>% 
   ggplot( aes(x = period, y =  home_smokers.1_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for home smokers = yes by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -666,7 +522,7 @@ meat = mean_wgts %>%
 meat_0 = meat%>% 
   ggplot( aes(x = period, y =  meat_freq_pmo..0_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for meat consumed per month (0 = none) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -676,7 +532,7 @@ meat_0 = meat%>%
 meat_1 = meat%>% 
   ggplot( aes(x = period, y =  meat_freq_pmo..1_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for meat consumed per month (1 = less than 1x/week) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -686,7 +542,7 @@ meat_1 = meat%>%
 meat_2 = meat%>% 
   ggplot( aes(x = period, y =  meat_freq_pmo..2_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for meat consumed per month (2 = 1-6x a week) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -696,9 +552,9 @@ meat_2 = meat%>%
 meat_3 = meat%>% 
   ggplot( aes(x = period, y =  meat_freq_pmo..3_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
- title = "weighted means for meat consumed per month (3 = 1-7x a day) by race & gender",
+ title = "weighted means for meat consumed per month (3 = 7-154x a week) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -708,6 +564,9 @@ meat_1
 meat_2
 meat_3
 ```
+
+## fruits and veggies per month
+
 ```{r fruits.veggies, echo=FALSE,  message=FALSE}
 fruits_veg = mean_wgts %>% 
   select(period, age_grp, race, gender, fruits_veggies_pmo..0_, fruits_veggies_pmo..1_, fruits_veggies_pmo..2_, fruits_veggies_pmo..3_,fruits_veggies_pmo..4_) %>% 
@@ -716,7 +575,7 @@ fruits_veg = mean_wgts %>%
 fruits_veg_0 = fruits_veg%>% 
   ggplot( aes(x = period, y =  fruits_veggies_pmo..0_) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for fruits & veggies consumed per month (0 = none) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -726,7 +585,7 @@ fruits_veg_0 = fruits_veg%>%
 fruits_veg_1 = fruits_veg%>% 
   ggplot( aes(x = period, y =  fruits_veggies_pmo..1_) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for fruits & veggies consumed per month (1 = less than once a week) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -736,7 +595,7 @@ fruits_veg_1 = fruits_veg%>%
 fruits_veg_2 = fruits_veg%>% 
   ggplot( aes(x = period, y =  fruits_veggies_pmo..2_) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for fruits & veggies consumed per month (2 = 1-6x a week) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -746,9 +605,9 @@ fruits_veg_2 = fruits_veg%>%
 fruits_veg_3 = fruits_veg%>% 
   ggplot( aes(x = period, y =  fruits_veggies_pmo..3_) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
- title = "weighted means for fruits & veggies consumed per month (3 = 1-22x per day) by race & gender",
+ title = "weighted means for fruits & veggies consumed per month (3 = 7-154x per week) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
     y = "weighted mean",
     caption = "by 5-year age groups (25-49)")
@@ -759,7 +618,7 @@ fruits_veg_2
 fruits_veg_3
 ```
 
-## protein consumed 
+## protein consumed (categories)
 
 ```{r}
 protein = mean_wgts %>% 
@@ -769,7 +628,7 @@ protein = mean_wgts %>%
 protein_0 = protein%>% 
   ggplot( aes(x = period, y =  protein..0_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of protein consumed (0 = none) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -779,7 +638,7 @@ protein_0 = protein%>%
 protein_1 = protein%>% 
   ggplot( aes(x = period, y =  protein..1_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of protein consumed (1 = 1-4600g) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -789,7 +648,7 @@ protein_1 = protein%>%
 protein_2 = protein%>% 
   ggplot( aes(x = period, y =  protein..2_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of protein consumed (2 = 4501-6600g) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -799,7 +658,7 @@ protein_2 = protein%>%
 protein_3 = protein%>% 
   ggplot( aes(x = period, y =  protein..3_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of protein consumed (3 = 6601-9200g) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -809,7 +668,7 @@ protein_3 = protein%>%
 protein_4 = protein%>% 
   ggplot( aes(x = period, y =  protein..4_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of protein consumed (4 = 9201+) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -821,19 +680,24 @@ protein_1
 protein_2
 protein_3
 protein_4
+
+head(protein)
+## all adds up to 1
 ```
 
+## saturated fatty acids (categorical)
 
-```{r}
+```{r echo=FALSE, message=FALSE}
 sat_fat = mean_wgts %>% 
   select(period, age_grp, race, gender, sat_fatty_acid.0_Mean, sat_fatty_acid.1_Mean, sat_fatty_acid.2_Mean, sat_fatty_acid.3_Mean,sat_fatty_acid.4_Mean ) %>% 
-  drop_na()
+  drop_na() %>% 
+  filter(period == 6)
 
 
 sat_fat_0 = sat_fat%>% 
   ggplot( aes(x = period, y = sat_fatty_acid.0_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of saturated fatty acid consumed (0 = 0) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -843,7 +707,7 @@ sat_fat_0 = sat_fat%>%
 sat_fat_1 = sat_fat%>% 
   ggplot( aes(x = period, y = sat_fatty_acid.1_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of saturated fatty acid consumed (1 = 1-1500g) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -853,7 +717,7 @@ sat_fat_1 = sat_fat%>%
 sat_fat_2= sat_fat%>% 
   ggplot( aes(x = period, y = sat_fatty_acid.2_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of saturated fatty acid consumed (2 = 1501-2400) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -863,7 +727,7 @@ sat_fat_2= sat_fat%>%
 sat_fat_3 = sat_fat%>% 
   ggplot( aes(x = period, y = sat_fatty_acid.3_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of saturated fatty acid consumed (3 =  2401-3600g) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -874,7 +738,7 @@ sat_fat_3 = sat_fat%>%
 sat_fat_4 = sat_fat%>% 
   ggplot( aes(x = period, y = sat_fatty_acid.4_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for grams of saturated fatty acid consumed (4 = 3601+) by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -886,9 +750,13 @@ sat_fat_1
 sat_fat_2
 sat_fat_3
 sat_fat_4
+
+head(sat_fat)
+
+## continous nhanes is period 5-7 so it shows up for sat_fat =1 because the ranges were much smaller than the ranges for teh old nhanes
 ```
 
-# still thyroid disease
+## still have thyroid disease y/n
 
 ```{r still.thyroid.disease, echo=FALSE, message=FALSE}
 still_thyroid = mean_wgts %>% 
@@ -899,7 +767,7 @@ still_thyroid = mean_wgts %>%
 still_thyroid_0 = still_thyroid%>% 
   ggplot( aes(x = period, y = still_thyroid_d.0_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for still thyroid disease = no by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -909,7 +777,7 @@ still_thyroid_0 = still_thyroid%>%
 still_thyroid_1 = still_thyroid%>% 
   ggplot( aes(x = period, y = still_thyroid_d.1_Mean) )+
    geom_line(aes(color = age_grp )) + 
-  facet_wrap(~race+gender)+
+  facet_wrap(~race+gender, scales = "free_y")+
   labs(
  title = "weighted means for still thyroid disease = yes by race & gender",
     x = "Periods (5-year groups from 1975-2014)",
@@ -952,101 +820,12 @@ diet = diet %>%
 
 
 
-```{r, echo=FALSE,  message=FALSE, include=FALSE}
-library(reshape2)
-diet_chol = diet %>% 
-  select(period, race, gender, AGE_GRP, cholesterol_mg) %>% 
-  drop_na() %>% 
-  filter(
-    race == c("Black", "White")
-  )
-
-#diet[, lapply(.SD, mean), by = .(period)]
-                
-
-#aggregate(diet[,5], list(diet$period), mean) 
- 
-
-chol = ggplot(diet_chol, aes(x=period, y=cholesterol_mg, color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
- facet_grid(~race+gender)
-chol
-
-```
-
-
-
-```{r alc.pmo, echo=FALSE,  message=FALSE}
-alc = diet %>% 
-  mutate(period = as.factor(period)) %>% 
-  select(period, race, gender, AGE_GRP, alc_pmo) %>% 
-  drop_na() %>% 
-  filter(race == c("Black", "White"))
-                      
-
-alc_p = ggplot(alc, aes(x=period, y=alc_pmo, group = AGE_GRP, color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
- facet_grid(~race+gender)+
-labs(
-    title = "average alcohol per month intake from 1975-2014",
-    x = "Periods (5-year groups)",
-    y = "alcohol per month",
-    caption = "by 5-year age groups (25-49)"
-  )
-
-alc_p
-## trying to find a better way to show this-only data for periods 3-4
-```
-
-
-
-```{r num.ppl.smoke.in.home, echo=FALSE, message=FALSE}
-smoke_in_home = diet%>% 
-  mutate(
-    period = as.factor(period)
-  ) %>% 
-  select(period, race, gender, AGE_GRP, num_ppl_smoke_inhome) %>% 
-   
-  drop_na() %>%
-  filter(race == c("Black", "White"))
-
-smoke_in_home = ggplot(smoke_in_home, aes(x=period, y=num_ppl_smoke_inhome, group = AGE_GRP, color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
- facet_wrap(~race+gender)+
-labs(
-    title = "average number of people that smoked in the home from 1975-2014",
-    x = "Periods (5-year groups)",
-    y = "number of people who smoke in a household",
-    caption = "by 5-year age groups (25-49)"
-  )
-smoke_in_home
-```
-
-
-
-## average drinks consumed a week in the past year
-
-```{r drinks.perweek.pastyear, echo=FALSE, message=FALSE}
-drinks = diet %>% 
-  select(period, AGE_GRP, race, gender, drinks_pw_pstyr) %>% 
-  drop_na() %>% 
-  mutate(period = as.factor(period)) %>% 
-  filter(race == c("Black", "White"))
-
-drink_p  = ggplot(drinks, aes(x=period, y=drinks_pw_pstyr, group = AGE_GRP, color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
- facet_grid(~race+gender)+
-labs(
-    title = "average drinks consumed per week in the past year from 1975-2014",
-    x = "Periods (5-year groups)",
-    y = "average drinks consumed per week",
-    caption = "by 5-year age groups (25-49)"
-  )
-drink_p
-```
-
 
 
 
 ## updated continuous variables
 
-```{r}
+```{r echo=FALSE, message=FALSE}
 cont = read.csv("./merged2_eda.csv") %>% mutate(
     race = as.factor(race),
     gender = as.factor(gender), 
@@ -1086,34 +865,23 @@ select(-protein_g, -protein_gm, -saturated_fat_g, -sat_fatty_acid, -fat_g, -fat_
 
 cont = cont %>% 
   rename(gender = genderz,
-         race = racez)
-cont
+         race = racez) %>% filter(period <=7)
+
 ```
 
-```{r protein, echo=FALSE, message=FALSE}
-prot = cont%>% 
-  select(period, AGE_GRP, race, gender, protein) %>% 
-  mutate(period = as.factor(period)) %>% 
-  drop_na() %>% 
-  filter( race == c("Black", "White"))
 
-protein_p = ggplot(prot, aes(x=period, y=protein, group = AGE_GRP, color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
- facet_wrap(~race+gender)+
-labs(
-    title = "average protein in grams consumed from 1975-2014",
-    x = "Periods (5-year groups)",
-    y = "grams of protein",
-    caption = "by 5-year age groups (25-49)"
-  )
-protein_p
-```
 
-```{r drinks.per.day, echo=FALSE, message=FALSE}
+
+
+
+
+## average drinks per day in the past year
+
+```{r drinks.per.day, echo=FALSE, message=FALSE, include=FALSE}
 drinks = cont %>% 
   select(period, AGE_GRP, race, gender, avg_drnks_per_day_pastyr) %>% 
   drop_na() %>% 
-  mutate(period = as.factor(period)) %>% 
-  filter(race == c("Black", "White"))
+  mutate(period = as.factor(period))
 
 drink_p  = ggplot(drinks, aes(x=period, y=avg_drnks_per_day_pastyr,group = AGE_GRP,  color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
  facet_wrap(~race+gender)+
@@ -1126,13 +894,13 @@ labs(
 drink_p
 ```
 
+## sugar
 
-```{r sugar , echo=FALSE, message=FALSE}
+```{r sugar , echo=FALSE, message=FALSE, include=FALSE}
 sugar = cont %>% 
   select(AGE_GRP, period, race, gender, sugar_gm) %>% 
   mutate(period = as.factor(period)) %>% 
-  drop_na() %>% 
-  filter(race == c("Black", "White"))
+  drop_na() 
 
 sugar_p = ggplot(sugar, aes(x=period, y=sugar_gm,group = AGE_GRP,  color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
  facet_wrap(~race+gender)+
@@ -1146,12 +914,13 @@ labs(
 sugar_p
 ```
 
+## fiber 
+
 ```{r fiber, echo=FALSE, message=FALSE}
 fiber_gm = cont %>% 
   select(period, AGE_GRP, race, gender, fiber_gm) %>% 
   drop_na() %>%
-  mutate(period = as.factor(period)) %>% 
-  filter(race == c("Black", "White"))
+  mutate(period = as.factor(period))
 
 fiber_p = ggplot(fiber_gm, aes(x=period, y=fiber_gm, group = AGE_GRP, color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
  facet_wrap(~race+gender)+
@@ -1163,6 +932,7 @@ labs(
   )
 fiber_p
 ```
+## cholesterol (mg)
 
 ```{r cholesterol, echo=FALSE, message=FALSE}
 cholesterol = cont %>% 
@@ -1186,6 +956,8 @@ labs(
 chol_p
 ```
 
+## sat fat
+
 ```{r}
 saturated_fat = cont%>% 
   mutate(
@@ -1206,23 +978,9 @@ labs(
 saturated_fat_p
 ```
 
-```{r}
-fat_g = cont %>% 
-  select(period, AGE_GRP, race, gender, fat) %>% 
-  drop_na() %>% 
-  mutate(period = as.factor(period)) %>% 
-  filter(race == c("Black", "White"))
-  
-fat_p = ggplot(fat_g, aes(x=period, y=fat, group = AGE_GRP, color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
- facet_wrap(~race+gender)+
-labs(
-    title = "average grams of  fat consumed from 1975-2014",
-    x = "Periods (5-year groups)",
-    y = "fat (g)",
-    caption = "by 5-year age groups (25-49)"
-  )
-fat_p
-```
+
+
+## mono sat fat
 
 ```{r mono.sat.fat, echo=FALSE, message=FALSE}
 mono = cont%>% 
@@ -1241,5 +999,142 @@ labs(
   )
 
 mono_p
+```
+
+## old and new nhanes combined-continuous nutrient variables
+
+```{r echo=FALSE, message=FALSE}
+cts_var = read.csv("./merge_diet.csv") %>% 
+   mutate(
+    race = as.factor(race),
+    gender = as.factor(gender), 
+    race = dplyr::recode(race, 
+                  `1` = "Black",
+                  `0`  = "White", 
+                  `2` = "Other"),
+    gender = dplyr::recode(gender, 
+                    `0` = "Male",
+                    `1` = "Female"),
+    AGE_GRP = as.factor(AGE_GRP),
+    AGE_GRP = dplyr::recode(AGE_GRP,
+                            `0` = "25-29 year olds",
+                            `1` = "30-34 year olds",
+                            `2` = "35-39 year olds",
+                            `3` = "40-44 year olds",
+                            `4` = "45-49 year olds"))
+
+```
+
+```{r echo=FALSE, message=FALSE}
+protein_cat = cts_var%>% 
+  select(period, AGE_GRP, race, gender, protein_g) %>% 
+  drop_na() %>% 
+  mutate(period = as.factor(period)) 
+
+cat_protein_p = ggplot(protein_cat, aes(x=period, y = protein_g, group = AGE_GRP, color = AGE_GRP)) + 
+  stat_summary(fun.y="mean", geom="line")+
+ facet_wrap(~race+gender, scales = "free_y")+
+labs(
+    title = "protein intake from 1975-2014",
+    x = "period",
+    y = "protein (g)",
+    caption = "by 5-year age groups (25-49)"
+  )
+cat_protein_p
+
+```
+
+```{r protein, echo=FALSE, message=FALSE}
+prot = cont%>% 
+  select(period, AGE_GRP, race, gender, protein) %>% 
+  mutate(period = as.factor(period)) %>% 
+  drop_na() 
+
+protein_p = ggplot(prot, aes(x=period, y=protein, group = AGE_GRP, color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
+ facet_wrap(~race+gender)+
+labs(
+    title = "average protein in grams consumed from 1975-2014",
+    x = "Periods (5-year groups)",
+    y = "grams of protein",
+    caption = "by 5-year age groups (25-49)"
+  )
+protein_p
+```
+
+```{r fat, echo=FALSE, message=FALSE}
+fat_cat = cts_var%>% 
+  select(period, AGE_GRP, race, gender, fat_g) %>% 
+  drop_na() %>% 
+  mutate(period = as.factor(period)) 
+
+cat_fat_p = ggplot(fat_cat, aes(x=period, y = fat_g, group = AGE_GRP, color = AGE_GRP)) + 
+  stat_summary(fun.y="mean", geom="line")+
+ facet_wrap(~race+gender, scales = "free_y")+
+labs(
+    title = "total fat intake from 1975-2014",
+    x = "period",
+    y = "fat (g)",
+    caption = "by 5-year age groups (25-49)"
+  )
+cat_fat_p
+```
+
+## fat
+
+```{r echo=FALSE, message=FALSE}
+fat_g = cont %>% 
+  select(period, AGE_GRP, race, gender, fat) %>% 
+  drop_na() %>% 
+  mutate(period = as.factor(period)) %>% 
+  filter(race == c("Black", "White"))
+  
+fat_p = ggplot(fat_g, aes(x=period, y=fat, group = AGE_GRP, color = AGE_GRP)) + stat_summary(fun.y="mean", geom="line")+
+ facet_wrap(~race+gender)+
+labs(
+    title = "average grams of  fat consumed from 1975-2014",
+    x = "Periods (5-year groups)",
+    y = "fat (g)",
+    caption = "by 5-year age groups (25-49)"
+  )
+fat_p
+```
+
+```{r echo=FALSE, message=FALSE}
+sat_fat_cat = cts_var%>% 
+  select(period, AGE_GRP, race, gender, saturated_fat_g) %>% 
+  drop_na() %>% 
+  mutate(period = as.factor(period)) 
+
+sat_fat_p = ggplot(sat_fat_cat, aes(x=period, y = saturated_fat_g, group = AGE_GRP, color = AGE_GRP)) + 
+  stat_summary(fun.y="mean", geom="line")+
+ facet_wrap(~race+gender, scales = "free_y")+
+labs(
+    title = "total saturated fat intake from 1975-2014",
+    x = "period",
+    y = "saturated fat (g)",
+    caption = "by 5-year age groups (25-49)"
+  )
+sat_fat_p
+
+sat_fat_cat %>% 
+  filter(period == 2)
+```
+
+```{r echo=FALSE, message=FALSE}
+cholest_cat = cts_var%>% 
+  select(period, AGE_GRP, race, gender, cholesterol_mg) %>% 
+  drop_na() %>% 
+  mutate(period = as.factor(period)) 
+
+cholest_p = ggplot(cholest_cat, aes(x=period, y = cholesterol_mg, group = AGE_GRP, color = AGE_GRP)) + 
+  stat_summary(fun.y="mean", geom="line")+
+ facet_wrap(~race+gender, scales = "free_y")+
+labs(
+    title = "total cholesterol intake from 1975-2014",
+    x = "period",
+    y = "cholesterol_mg",
+    caption = "by 5-year age groups (25-49)"
+  )
+cholest_p
 ```
 
