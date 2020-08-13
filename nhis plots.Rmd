@@ -1,0 +1,151 @@
+---
+title: "NHIS plots"
+author: "lulu zhang"
+date: "8/13/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sas7bdat)
+library(tidyr)
+library(tidyverse)
+library(SASxport)
+library(dplyr)
+require(haven)
+library(car)
+library(readxl)
+library(here)
+library(skimr) # install.packages('skimr')
+library(kableExtra) # install.packages('kableExtra')
+require(ggplot2)
+require(sandwich)
+require(msm)
+```
+
+```{r}
+NHIS = read.csv("./nhis_00004.csv.gz") %>% 
+  select(-SERIAL, -NHISHID, -HHWEIGHT, -HHX, -FWEIGHT, -SAMPWEIGHT, -FMX, -SUPP1WT, -SUPP2WT, -CONDWT3, -CONDWT4, -CONDWT5, -SUB77WT, -ASTATFLG, -CSTATFLG) %>% 
+  rename(weight = PERWEIGHT,
+         weight_lb = WEIGHT,
+         HEIGHT_IN = HEIGHT) %>% 
+  janitor::clean_names() %>% 
+  rename(gender = sex,
+         race = racea,
+         diabetes = diabeticev,
+         hypertension = hypertenev,
+         ever_had_thyroid_d = thyroidev,
+         current_smoker1 = smokestatus2,
+         current_smoker2 = smokestatus1
+         ) %>% 
+  mutate(
+    gender = dplyr::recode(gender, 
+                           `1` = "0",
+                           `2` = "1" ),
+    gender = as.factor(gender),
+    race = as.factor(race),
+     race = dplyr::recode(race,
+                          `100` = "0",
+                          `200` = "1",
+                          `300` = "2", `310` = "2", `320` = "2", `330` = "2", `340` = "2", `400` = "2", `410` = "2",`411` = "2",`412` = "2",`413` = "2",`414` = "2",`415` = "2",
+                          `416` = "2", `420` = "2",`421` = "2",`422` = "2",`423` = "2",
+                          `430` = "2",`431` = "2",`432` = "2",`433` = "2",`434` = "2",
+                          `500` = "2",`510` = "2",`520` = "2",`530` = "2",`540` = "2",`550` = "2",`560` = "2",`570` = "2",`580` = "2", `600` = "2",`610` = "2",`611` = "2",`612` = "2",`613` = "2",`614` = "2",`615` = "2",`616` = "2",`617` = "2",`900` = "2",
+                          `970` = "2",`980` = "2",`990` = "2",
+                          ),
+    diabetes = dplyr::recode(diabetes,
+                             `0` = "",
+                             `1`= "0",
+                             `2` = "1",
+                             `3` = "1",
+                             `7` = "2",
+                             `8` = "2",
+                             `9` = "2"),
+    diabetes = as.factor(diabetes),
+    hypertension = dplyr::recode(hypertension, 
+                                 `0` = "",
+                                 `1` = "0",
+                                 `2` = "1",
+                                 `7` = "2",
+                                 `8` = "2",
+                                 `9` = "2"),
+    hypertension = as.factor(hypertension),
+    ever_had_thyroid_d = dplyr::recode(ever_had_thyroid_d, #ever told have thyroid problem
+                              `0` = "",
+                              `1` = "0",
+                              `2` = "1",
+                              `7` = "2",
+                              `8` = "2",
+                              `9` = "2"),
+    ever_had_thyroid_d = as.factor(ever_had_thyroid_d),
+    thyroidyrc = dplyr::recode(thyroidyrc, #Had thyroid trouble or goiter, past year (Condition)
+                             `00` = "",
+                             `10` = "0",
+                             `20` = "1",
+                             `21` = "1",
+                             `22` = "1"),
+    thyroidyrc = as.factor(thyroidyrc),
+    current_smoker1 = dplyr::recode(current_smoker1, #Cigarette smoking recode 2: Current detailed/former/never
+                                  `00` = "",
+                                  `10` = "1",
+                                  `11` = "1",
+                                  `12` = "1",
+                                  `13` = "1",
+                                  `20` = "2",#former smoker 
+                                  `30` = "0",
+                                  `40` = "1",
+                                  `90` = "3"),
+    current_smoker1 = as.factor(current_smoker1),
+    current_smoker2 = dplyr::recode(current_smoker2, 
+                                   `00` = "",
+                                   `10` = "0",
+                                   `20` = "1",
+                                   `30` = "2", #former smoker
+                                   `31` = "2",
+                                   `32` = "2",
+                                   `90` = "3",
+                                   `91` = "3",
+                                   `92` = "2"),
+    current_smoker2 = as.factor(current_smoker2),
+    current_smoker = coalesce(current_smoker1, current_smoker2)) %>% 
+    select(-current_smoker1, -current_smoker2)
+
+
+
+library(dplyr)
+
+NHIS <- NHIS %>% mutate(age_grp = case_when(age >= 25  & age <= 29 ~ '0',
+                                             age >= 30  & age <= 34 ~ '1',
+                                             age >= 35  & age <= 39 ~ '2',
+                                             age >= 40  & age <= 44 ~ '3',
+                                             age >= 45  & age <= 49 ~ '4'),
+                        period = case_when(year >= 1975 & year <= 1979 ~ '0',
+                                           year >= 1980 & year <= 1984 ~ '1',
+                                           year >= 1985 & year <= 1989 ~ '2',
+                                           year >= 1990 & year <= 1994 ~ '3',
+                                           year >= 1995 & year <= 1999 ~ '4',
+                                           year >= 2000 & year <= 2004 ~ '5',
+                                           year >= 2005 & year <= 2009 ~ '6',
+                                           year >= 2010 & year <= 2014 ~ '7'),
+                        age_grp = as.factor(age_grp),
+                        period = as.numeric(period))
+
+write.csv(NHIS, "./nhis.csv")
+
+NHIS %>% 
+  filter(period == c(0:7),
+         age_grp == c(0:4),
+         bmicalc < 100) %>% 
+  drop_na(bmicalc)%>% 
+ggplot( aes(x=period, y=bmicalc, group_by(age_grp), color=age_grp))+
+  geom_line()
+
+NHIS %>% 
+ggplot( aes(x = period, y = bmicalc)) + 
+  geom_line(aes(color = age_grp), size = 1) +
+  scale_color_manual(values = c("#00AFBB", "#E7B800", "red",
+                                "purple", "pink")) +
+  fct_grid(~race+gender, scales = "free_y")
+```
+```
+
