@@ -19,11 +19,16 @@ library(here)
 library(skimr) # install.packages('skimr')
 library(kableExtra) # install.packages('kableExtra')
 require(ggplot2)
+library(janitor)
+library(ggplot2)
 require(sandwich)
 require(msm)
+library(forcats)
+require(ggplot2)
+require(gridExtra)
 ```
 
-```{r}
+```{r load.data, include=FALSE}
 NHIS = read.csv("./nhis_00004.csv.gz") %>% 
   select(-SERIAL, -NHISHID, -HHWEIGHT, -HHX, -FWEIGHT, -SAMPWEIGHT, -FMX, -SUPP1WT, -SUPP2WT, -CONDWT3, -CONDWT4, -CONDWT5, -SUB77WT, -ASTATFLG, -CSTATFLG) %>% 
   rename(weight = PERWEIGHT,
@@ -128,24 +133,150 @@ NHIS <- NHIS %>% mutate(age_grp = case_when(age >= 25  & age <= 29 ~ '0',
                                            year >= 2005 & year <= 2009 ~ '6',
                                            year >= 2010 & year <= 2014 ~ '7'),
                         age_grp = as.factor(age_grp),
-                        period = as.numeric(period))
+                        period = as.numeric(period),
+                        gender = dplyr::recode(gender,
+                                               `0` = "Male",
+                                               `1` = "Female"),
+                        race = dplyr::recode(race,
+                                             `0` = "White",
+                                             `1` = "Black",
+                                             `2` = "Other"))
 
-write.csv(NHIS, "./nhis.csv")
-
-NHIS %>% 
-  filter(period == c(0:7),
-         age_grp == c(0:4),
-         bmicalc < 100) %>% 
-  drop_na(bmicalc)%>% 
-ggplot( aes(x=period, y=bmicalc, group_by(age_grp), color=age_grp))+
-  geom_line()
-
-NHIS %>% 
-ggplot( aes(x = period, y = bmicalc)) + 
-  geom_line(aes(color = age_grp), size = 1) +
-  scale_color_manual(values = c("#00AFBB", "#E7B800", "red",
-                                "purple", "pink")) +
-  fct_grid(~race+gender, scales = "free_y")
+#write.csv(NHIS, "./nhis.csv")
 ```
+
+```{r plots.bmi, echo=FALSE, message=FALSE}
+## trying to plot trend of BMI over periods 0-7 among age groups 0-4, fct_wrapped by race and gender 
+
+bmi_p = NHIS %>% 
+  filter(period %in% c(0:7),
+         age_grp %in% c(0:4),
+         bmicalc %in% c(1:100)) %>% 
+           group_by(age_grp, period, race, gender) %>% 
+           summarize(avg_bmi = mean(bmicalc, na.rm = TRUE)) %>% 
+ggplot(aes(x=period, y=avg_bmi, color=age_grp))+
+  geom_line()+
+  facet_wrap(~race+gender, scales = "free_y")+
+  labs(title = "Avg BMI from NHIS data from 1975-2014 among 25-49 year olds",
+       ylab = "average BMI")
+
+bmi_p +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
+  labels=c( `0` = "1974-1979",
+           `1` = "1980-1984",
+                             `2` = "1985-1989",`3` = "1990-1994",
+                           `4` = "1995-1999", `5` = "2000-2004",
+                           `6` = "2005-2009", `7` = "2010-2014"))+
+  scale_fill_discrete(name = "Age Groups", labels = c(`0` = "25-29", `1` ="30-34", `2` ="35-39", `3` ="40-44", `4`="45-49"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+
+
+```
+
+```{r height.in, echo=FALSE, message=FALSE}
+
+hist( x = NHIS$height_in)
+
+height_p = NHIS %>% 
+  filter(period %in% c(0:7),
+         age_grp %in% c(0:4),
+         height_in %in% c(1:94)) %>% 
+           group_by(age_grp, period, race, gender) %>% 
+           summarize(avg_height_in = mean(height_in, na.rm = TRUE)) %>% 
+ggplot(aes(x=period, y=avg_height_in, color=age_grp))+
+  geom_line()+
+  facet_wrap(~race+gender, scales = "free_y")+
+  labs(title = "Avg height (in) from NHIS data from 1975-2014 among 25-49 year olds",
+       ylab = "average height in inches")
+
+height_p +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
+  labels=c( `0` = "1974-1979",
+           `1` = "1980-1984",
+                             `2` = "1985-1989",`3` = "1990-1994",
+                           `4` = "1995-1999", `5` = "2000-2004",
+                           `6` = "2005-2009", `7` = "2010-2014"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+## weights are categorical and coded differently pre 1997 and post 1997
+
+```{r weight.lb, echo=FALSE}
+
+hist( x = NHIS$weight_lb)
+
+## plotting as continuous variable
+weight_pre_1997 = NHIS %>% 
+  filter(year %in% c(1976:1996),
+         age_grp %in% c(0:4),
+         weight_lb %in% c(1:500)) %>% 
+           group_by(age_grp, year, race, gender) %>% 
+           summarize(avg_weight_lb = mean(weight_lb, na.rm = TRUE)) %>% 
+ggplot(aes(x=year, y = avg_weight_lb,  color=age_grp))+
+  geom_line()+
+  facet_wrap(~race+gender, scales = "free_y")+
+  labs(title = "Avg height (in) from NHIS data from 1975-1996 among 25-49 year olds",
+       ylab = "average height in inches")
+
+weight_pre_1997 +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
+  labels=c( `0` = "1974-1979",
+           `1` = "1980-1984",
+                             `2` = "1985-1989",`3` = "1990-1994",
+                           `4` = "1995-1999", `5` = "2000-2004",
+                           `6` = "2005-2009", `7` = "2010-2014"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+### code for weight changed in 1997 so plotting two 
+weight_post_1997 = NHIS %>% 
+  filter(year %in% c(1997:2014),
+         age_grp %in% c(0:4),
+         weight_lb %in% c(1:900)) %>% 
+           group_by(age_grp, year, race, gender) %>% 
+           summarize(avg_weight_lb = mean(weight_lb, na.rm = TRUE)) %>% 
+ggplot(aes(x=year, y=avg_weight_lb, color=age_grp))+
+  geom_line()+
+  facet_wrap(~race+gender, scales = "free_y")+
+  labs(title = "Avg height (in) from NHIS data from 1997-2014 among 25-49 year olds",
+       ylab = "average height in inches")
+
+weight_post_1997 +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
+  labels=c( `0` = "1974-1979",
+           `1` = "1980-1984",
+                             `2` = "1985-1989",`3` = "1990-1994",
+                           `4` = "1995-1999", `5` = "2000-2004",
+                           `6` = "2005-2009", `7` = "2010-2014"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+### histograms because it is not continuous weights
+agg_pre1997 <- NHIS %>% 
+  filter(year %in% c(1976:1996),
+         age_grp %in% c(0:4),
+    weight_lb %in% c(1:500)) %>% 
+count( weight_lb, age_grp, year, race, gender)
+
+
+agg_post1997 <- NHIS %>% 
+  filter(year %in% c(1997:2014),
+         age_grp %in% c(0:4),
+    weight_lb %in% c(1:300)) %>% 
+count( weight_lb, age_grp, year, race, gender)
+
+
+
+
+
+## pre 1997 weights
+
+p1 <- ggplot(agg_pre1997) +
+      geom_col(aes(x = weight_lb, y = n, fill = age_grp), position = "dodge")  +
+  facet_wrap(~race+gender, scales = "free_y")
+
+p2 <- ggplot(agg_post1997) +
+      geom_col(aes(x = weight_lb, y = n, fill = age_grp), position = "dodge") +
+  facet_wrap(~race+gender, scales = "free_y")
+p1
+p2
+
+## not super helpful
 ```
 
