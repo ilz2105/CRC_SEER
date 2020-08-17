@@ -26,9 +26,195 @@ require(msm)
 library(forcats)
 require(ggplot2)
 require(gridExtra)
+library(naniar)
 ```
 
+```{r load.data, include=FALSE}
+new_nhanes = read.csv("./new_nhanes_per.csv")
+nhanesI = read.csv("./nhanesI_per.csv")
+nhanesII = read.csv("./nhanesII_per.csv")
+nhanesIII = read.csv("./nhanesIII_per.csv")
+nhanesI_diet = read.csv("./nhanesI_diet_per.csv")
+nhesI = read.csv("./nhesI_per.csv")
+```
+
+```{r plot.new.nhanes, message=FALSE, echo=FALSE}
+new_nhanes = new_nhanes %>% 
+  mutate(gender = as.factor(gender),
+         gender = dplyr::recode(gender, 
+                                `0` = "Male",
+                                `1` = "Female"),
+         race = as.factor(race),
+         race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other"),
+         AGE_GRP = as.factor(AGE_GRP),
+         AGE_GRP = dplyr::recode(AGE_GRP,
+                                 `0` = "25-29",
+                                 `1` = "30-34",
+                                 `2` = "35-39",
+                                 `3` = "40-44",
+                                 `4` = "45-49"))
+
+nhanesI = nhanesI  %>% 
+  mutate(gender = as.factor(gender),
+         gender = dplyr::recode(gender, 
+                                `0` = "Male",
+                                `1` = "Female"),
+         race = as.factor(race),
+         race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other"),
+         AGE_GRP = as.factor(AGE_GRP),
+         AGE_GRP = dplyr::recode(AGE_GRP,
+                                 `0` = "25-29",
+                                 `1` = "30-34",
+                                 `2` = "35-39",
+                                 `3` = "40-44",
+                                 `4` = "45-49"))
+
+nhanesII= nhanesII %>% 
+  mutate(gender = as.factor(gender),
+         gender = dplyr::recode(gender, 
+                                `0` = "Male",
+                                `1` = "Female"),
+         race = as.factor(race),
+         race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other"),
+         AGE_GRP = as.factor(AGE_GRP),
+         AGE_GRP = dplyr::recode(AGE_GRP,
+                                 `0` = "25-29",
+                                 `1` = "30-34",
+                                 `2` = "35-39",
+                                 `3` = "40-44",
+                                 `4` = "45-49"),
+         period = as.numeric(period),
+         height_ft =as.numeric(levels(height_ft))[height_ft],   ###888:999 NA
+         height_in = as.integer(levels(height_in))[height_in],
+         weight_lb = as.integer(levels(weight_lb))[weight_lb])%>% 
+  replace_with_na(replace = list(weight_lb = 888)) %>% 
+  replace_with_na(replace = list(height_in = 88))%>% 
+  replace_with_na(replace = list(height_ft = 8))
+ 
+nhanesII$height_cm <- (nhanesII$height_ft*12+nhanesII$height_in)*2.54
+nhanesII$weight_kg <- nhanesII$weight_lb/2.205
+## calc bmi frim height and weight
+nhanesII$height_m <- nhanesII$height_cm/100
+nhanesII$bmi <- (nhanesII$weight_kg/(nhanesII$height_m^2))
+nhanesII
+
+nhanesIII = nhanesIII%>% 
+  mutate(gender = as.factor(gender),
+         gender = dplyr::recode(gender, 
+                                `1` = "Male",
+                                `2` = "Female"),
+         race = as.factor(race),
+         race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other"),
+         AGE_GRP = as.factor(AGE_GRP),
+         AGE_GRP = dplyr::recode(AGE_GRP,
+                                 `0` = "25-29",
+                                 `1` = "30-34",
+                                 `2` = "35-39",
+                                 `3` = "40-44",
+                                 `4` = "45-49"),
+         period = as.numeric(period)) %>% 
+  replace_with_na(replace = list(weight_lb = 999)) %>% #888:999 are NA
+  replace_with_na(replace = list(weight_lb = 888))%>% 
+  replace_with_na(replace = list(height_in = 888))%>% 
+  replace_with_na(replace = list(height_in = 888))
+
+ 
+nhanesIII$height_cm <- nhanesIII$height_in*2.54
+nhanesIII$weight_kg <- nhanesIII$weight_lb/2.205
+## calc bmi frim height and weight
+nhanesIII$height_m <- nhanesIII$height_cm/100
+nhanesIII$bmi <- (nhanesIII$weight_kg/(nhanesIII$height_m^2))
+nhanesIII 
+```
+
+## combine new nhanes, nhanes II, nhanesIII
+
 ```{r}
-read.csv("./new_nhanes_per.csv")
+new_nhanes = new_nhanes %>% 
+  select(gender, race, period, AGE_GRP, bmi, weight_kg, height_cm )
+
+nhanesII = nhanesII %>% 
+  select(gender, race, period, AGE_GRP, bmi, weight_kg, height_cm )
+
+nhanesIII = nhanesIII %>% 
+  select(gender, race, period, AGE_GRP, bmi, weight_kg, height_cm )
+
+merged = rbind(nhanesII, nhanesIII, new_nhanes)
+
+```
+
+
+### plotting BMI 
+
+```{r bmi.plot, message=FALSE, echo=FALSE}
+# histogram to look at distribution
+new_bmi = merged %>% 
+  filter(period == 3)
+hist( x = new_bmi$bmi)
+
+#plot avg bmi across periods for new nhanes (1999-2018)
+bmi_p2 = merged %>%  
+  filter(between (period, 0,7),
+         between (bmi ,12,80)) %>% 
+           group_by( period, AGE_GRP, race, gender) %>% 
+           summarize(avg_bmi = mean(bmi, na.rm = TRUE)) %>% 
+ggplot(aes(x=period, y=avg_bmi, color=AGE_GRP))+
+  geom_line()+
+  facet_wrap(~race+gender, scales = "free_y")+
+  labs(title = "Avg BMI from 1975-2014 among 25-49 year olds",
+       ylab = "average BMI")
+
+bmi_p2 +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
+  labels=c( `0` = "1974-1979",
+           `1` = "1980-1984",
+                             `2` = "1985-1989",`3` = "1990-1994",
+                           `4` = "1995-1999", `5` = "2000-2004",
+                           `6` = "2005-2009", `7` = "2010-2014"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+### no data for period 2 (1985-1989)
+```
+
+```{r height, echo=FALSE, message=FALSE}
+
+height_c = merged %>% 
+  filter(period == 3)
+
+hist( x = height_c$height_cm)
+
+#plot avg bmi across periods for new nhanes (1999-2018)
+height_p2 = merged %>%  
+  filter(between(period,0,7),
+         between(height_cm ,10, 300)) %>% 
+           group_by( period, AGE_GRP, race, gender) %>% 
+           summarize(avg_height_cm = mean(height_cm, na.rm = TRUE)) %>% 
+ggplot(aes(x=period, y=avg_height_cm, color=AGE_GRP))+
+  geom_line()+
+  facet_wrap(~race+gender, scales = "free_y")+
+  labs(title = "Avg BMI from 1975-2014 among 25-49 year olds",
+       ylab = "average BMI")
+
+height_p2 +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
+  labels=c( `0` = "1974-1979",
+           `1` = "1980-1984",
+                             `2` = "1985-1989",`3` = "1990-1994",
+                           `4` = "1995-1999", `5` = "2000-2004",
+                           `6` = "2005-2009", `7` = "2010-2014"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+#missing for period 2
+
 ```
 
