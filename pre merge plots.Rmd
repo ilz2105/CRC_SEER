@@ -34,11 +34,13 @@ new_nhanes = read.csv("./new_nhanes_per.csv")
 nhanesI = read.csv("./nhanesI_per.csv")
 nhanesII = read.csv("./nhanesII_per.csv")
 nhanesIII = read.csv("./nhanesIII_per.csv")
-nhanesI_diet = read.csv("./nhanesI_diet_per.csv")
+nhanesI_diet = read.csv("./nhanesI_diet_per.csv")  ## has dob, month (01-12), year, (1986-1962) 
 nhesI = read.csv("./nhesI_per.csv")
+n1_htwt = read.csv("./n1_ht_wt.csv")
+n3_diet = read.csv("./n3_diet.csv")
 ```
 
-```{r plot.new.nhanes, message=FALSE, echo=FALSE}
+```{r tidy.new.nhanes, message=FALSE, echo=FALSE, include=FALSE}
 new_nhanes = new_nhanes %>% 
   mutate(gender = as.factor(gender),
          gender = dplyr::recode(gender, 
@@ -56,7 +58,23 @@ new_nhanes = new_nhanes %>%
                                  `2` = "35-39",
                                  `3` = "40-44",
                                  `4` = "45-49"))
-
+nhanesI_diet = nhanesI_diet %>% 
+  mutate(gender = as.factor(gender),
+         gender = dplyr::recode(gender, 
+                                `0` = "Male",
+                                `1` = "Female"),
+         race = as.factor(race),
+         race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other"),
+         AGE_GRP = as.factor(AGE_GRP),
+         AGE_GRP = dplyr::recode(AGE_GRP,
+                                 `0` = "25-29",
+                                 `1` = "30-34",
+                                 `2` = "35-39",
+                                 `3` = "40-44",
+                              `4` = "45-49"))
 nhanesI = nhanesI  %>% 
   mutate(gender = as.factor(gender),
          gender = dplyr::recode(gender, 
@@ -73,8 +91,20 @@ nhanesI = nhanesI  %>%
                                  `1` = "30-34",
                                  `2` = "35-39",
                                  `3` = "40-44",
-                                 `4` = "45-49"))
+                              `4` = "45-49"))
+n1_htwt = n1_htwt  %>% 
+  janitor::clean_names()%>% 
+  mutate(
+    height_cm = as.numeric(levels(height_cm))[height_cm]/10,
+    weight_kg = as.numeric(levels(weight_kg))[weight_kg]/100)
+n1_htwt$height_m <- n1_htwt$height_cm/100
+n1_htwt$bmi <- (n1_htwt$weight_kg/(n1_htwt$height_m^2))
 
+nhanesi = merge(nhanesI, n1_htwt, by= "seqn") 
+  
+```
+
+```{r message=FALSE, echo=FALSE, include=FALSE}
 nhanesII= nhanesII %>% 
   mutate(gender = as.factor(gender),
          gender = dplyr::recode(gender, 
@@ -137,21 +167,30 @@ nhanesIII$weight_kg <- nhanesIII$weight_lb/2.205
 nhanesIII$height_m <- nhanesIII$height_cm/100
 nhanesIII$bmi <- (nhanesIII$weight_kg/(nhanesIII$height_m^2))
 nhanesIII 
+n3_diet = n3_diet %>% 
+  janitor::clean_names()
+
+nhanesIII = merge(nhanesIII, n3_diet, by = "seqn")
 ```
 
 ## combine new nhanes, nhanes II, nhanesIII
 
-```{r}
-new_nhanes = new_nhanes %>% 
+```{r merge, include=FALSE}
+new_nhanesx = new_nhanes %>% 
   select(gender, race, period, AGE_GRP, bmi, weight_kg, height_cm )
 
-nhanesII = nhanesII %>% 
+nhanesix = nhanesi %>% 
   select(gender, race, period, AGE_GRP, bmi, weight_kg, height_cm )
 
-nhanesIII = nhanesIII %>% 
+nhanesIIx = nhanesII %>% 
   select(gender, race, period, AGE_GRP, bmi, weight_kg, height_cm )
 
-merged = rbind(nhanesII, nhanesIII, new_nhanes)
+nhanesIIIx = nhanesIII %>% 
+  select(gender, race, period, AGE_GRP, bmi, weight_kg, height_cm )
+
+merged1 = rbind(nhanesix, nhanesIIx)
+merged2 = rbind(nhanesIIIx, new_nhanesx)
+merged = rbind(merged1, merged2)
 
 ```
 
@@ -161,7 +200,7 @@ merged = rbind(nhanesII, nhanesIII, new_nhanes)
 ```{r bmi.plot, message=FALSE, echo=FALSE}
 # histogram to look at distribution
 new_bmi = merged %>% 
-  filter(period == 3)
+  filter(period == 2)
 hist( x = new_bmi$bmi)
 
 #plot avg bmi across periods for new nhanes (1999-2018)
@@ -187,24 +226,30 @@ bmi_p2 +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
 ### no data for period 2 (1985-1989)
 ```
 
+
+
 ```{r height, echo=FALSE, message=FALSE}
 
 height_c = merged %>% 
-  filter(period == 3)
+  filter(period %in% c(4:5),
+         race == "White",
+         gender == "Female",
+         between(height_cm, 20, 220))
+        # between(height_cm, 20, 270))
 
 hist( x = height_c$height_cm)
 
 #plot avg bmi across periods for new nhanes (1999-2018)
 height_p2 = merged %>%  
   filter(between(period,0,7),
-         between(height_cm ,10, 300)) %>% 
+         between(height_cm ,20, 250)) %>% 
            group_by( period, AGE_GRP, race, gender) %>% 
            summarize(avg_height_cm = mean(height_cm, na.rm = TRUE)) %>% 
 ggplot(aes(x=period, y=avg_height_cm, color=AGE_GRP))+
   geom_line()+
   facet_wrap(~race+gender, scales = "free_y")+
-  labs(title = "Avg BMI from 1975-2014 among 25-49 year olds",
-       ylab = "average BMI")
+  labs(title = "Avg height (cm) from 1975-2014 among 25-49 year olds",
+       ylab = "average height(cm)")
 
 height_p2 +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
   labels=c( `0` = "1974-1979",
@@ -214,7 +259,97 @@ height_p2 +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
                            `6` = "2005-2009", `7` = "2010-2014"))+
    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
-#missing for period 2
+
+
+```
+
+Male, Other race, 25-29 year olds (red line) looks odd for period 1 because only 2 observations, heights = 162.56, 157.48
+
+
+```{r weight, message=FALSE, echo=FALSE}
+weight_kg = merged %>% 
+  filter(period <= 5,
+         gender == "Female",
+         race == "Black",
+         AGE_GRP == "35-39")
+
+hist( x = weight_kg$weight_kg)
+
+#plot avg bmi across periods for new nhanes (1999-2018)
+weight_p2 = merged %>%  
+  filter(between(period,0,7),
+         between(weight_kg ,10, 250)) %>% 
+           group_by( period, AGE_GRP, race, gender) %>% 
+           summarize(avg_weight_kg = mean(weight_kg, na.rm = TRUE)) %>% 
+ggplot(aes(x=period, y=avg_weight_kg, color=AGE_GRP))+
+  geom_line()+
+  facet_wrap(~race+gender, scales = "free_y")+
+  labs(title = "Avg weight (kg) from 1975-2014 among 25-49 year olds",
+       ylab = "average weight (kg)")
+
+weight_p2 +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
+  labels=c( `0` = "1974-1979",
+           `1` = "1980-1984",
+                             `2` = "1985-1989",`3` = "1990-1994",
+                           `4` = "1995-1999", `5` = "2000-2004",
+                           `6` = "2005-2009", `7` = "2010-2014"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+
+```{r cts.diet.var, message=FALSE, echo=FALSE}
+n1_diet = nhanesI_diet %>% 
+  select(race, gender, AGE_GRP, period, cholesterol_mg, sat_fatty_acid, fat, protein) %>% 
+  filter(period <=7)
+nhanesi
+
+nhanesIId = nhanesII %>% 
+  mutate(
+    tot_sat_fat = as.numeric(tot_sat_fat)/100,
+    fat = as.numeric(fat)/100,
+    protein = as.numeric(protein)/100 ) %>%
+  rename(sat_fatty_acid = tot_sat_fat) %>% 
+  select(race, gender, AGE_GRP, period, sat_fatty_acid, fat, protein) %>% 
+  filter(period <= 7)
+
+nhanes3d = nhanesIII %>% select(race, gender, AGE_GRP, period, cholesterol, sat_fatty_acid, fat, protein) 
+
+new_nhanes_diet = new_nhanes %>% select(race, gender, AGE_GRP, period, cholesterol, sat_fatty_acid, fat, protein) %>% 
+  rename(cholesterol_mg = cholesterol)
+
+d1 = full_join(n1_diet, nhanesIId)
+d2= full_join(nhanes3d, new_nhanes_diet)
+diet = full_join(d1, d2)
+
+
+```
+
+```{r fat, echo=FALSE, message=FALSE}
+fat_h =  diet %>% 
+  filter(period <= 7)
+
+hist( x = fat_h$fat)
+
+#plot avg bmi across periods for new nhanes (1999-2018)
+fat_p = diet %>%  
+  filter(between(period,0,7),
+         between(fat ,0, 50)) %>% 
+           group_by( period, AGE_GRP, race, gender) %>% 
+           summarize(avg_fat = mean(fat, na.rm = TRUE)) %>% 
+ggplot(aes(x=period, y=avg_fat, color=AGE_GRP))+
+  geom_line()+
+  facet_wrap(~race+gender, scales = "free_y")+
+  labs(title = "Avg fat (g) intake  from 1975-2014 among 25-49 year olds",
+       ylab = "average fat (g)")
+
+fat_p +  scale_x_continuous(breaks=c(0, 1,2,3,4,5,6,7),
+  labels=c( `0` = "1974-1979",
+           `1` = "1980-1984",
+                             `2` = "1985-1989",`3` = "1990-1994",
+                           `4` = "1995-1999", `5` = "2000-2004",
+                           `6` = "2005-2009", `7` = "2010-2014"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 ```
 
