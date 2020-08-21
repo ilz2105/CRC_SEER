@@ -561,7 +561,24 @@ new_nhanes_hemo = new_nhanes %>%
   select(AGE_GRP, period, race, gender, h1ac) %>% 
   rename(ghp = h1ac)
 
-glyco = rbind(nhanesIII_hemo, new_nhanes_hemo)
+glyco = rbind(nhanesIII_hemo, new_nhanes_hemo) %>% 
+  mutate(
+    AGE_GRP = as.factor(AGE_GRP),
+    AGE_GRP = dplyr::recode(AGE_GRP, 
+                        `0` = "25-29",
+                        `1` = "30-34",
+                        `2` = "35-39",
+                        `3` = "40-44",
+                        `4` = "45-49"),
+    race = as.factor(race),
+    race = dplyr::recode(race,
+                         `0` = "White",
+                         `1` = "Black",
+                         `2` = "Other"),
+    gender = as.factor(gender),
+    gender = dplyr::recode(gender,
+                           `1` = "Male",
+                           `2` = "Female"))
 
 
 glyco_p = glyco %>%  
@@ -664,7 +681,7 @@ nhesII = read.csv("./nhesII.csv") %>%
 ```
 
 
-```{r old.growth.data, echo=FALSE}
+```{r old.growth.data, echo=FALSE, include=FALSE}
 nhesII
 nhesIII
 nhanesIx
