@@ -1,0 +1,115 @@
+---
+title: "8/26/2020"
+author: "lulu zhang"
+date: "8/26/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sas7bdat)
+library(tidyr)
+library(tidyverse)
+library(SASxport)
+library(dplyr)
+require(haven)
+library(car)
+library(readxl)
+library(here)
+library(skimr) # install.packages('skimr')
+library(kableExtra) # install.packages('kableExtra')
+require(ggplot2)
+library(janitor)
+library(ggplot2)
+require(sandwich)
+require(msm)
+library(forcats)
+require(ggplot2)
+require(gridExtra)
+```
+
+## weighted bmi
+
+```{r bmi, echo=FALSE, message=FALSE}
+new = read.csv("./nhanesbmi.csv")
+nhis = read.csv("./nhisbmi.csv")
+new 
+nhis = nhis %>% 
+  rename(survey_yr = period)
+bmi_all = rbind(nhis, new) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                 `1` = "5-9",
+                                 `2` = "10-14",
+                                 `3` = "15-19",
+                                 `4` = "20-24",
+                                 `5` = "25-29",
+                                 `6` = "30-34",
+                                 `7` = "35-39",
+                                 `8` = "40-44",
+                                 `9` = "45-49"))
+
+bmi_all = bmi_all %>%
+  select(age_grp, survey_yr, race, gender, bmi, weight, psu, strata) %>% 
+  filter(survey_yr %in% c(0:11),
+         between(bmi, 1,50),
+         race %in% c("White", "Black", "Other")) %>% 
+   group_by(age_grp, survey_yr, race, gender) %>% 
+   mutate(weighted_bmi = weighted.mean(bmi, weight))
+
+## plot
+bmi_all %>% 
+ggplot(aes(x=survey_yr, weighted_bmi, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "weighted means of bmi from 1963-2018 among 0-49 year olds",
+       ylab = "average bmi") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1963-1965",`1` = "1966-1970",
+           `2` = "1971-1975",`3` = "1976-1980",`4` = "1981-1987", `5` = "1988-1994", `6`= "1995-1998",
+           `7` = "1999-2002", `8` = "2003-2006", `9` = "2007-2010", `10` = "2011-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+nhis %>% filter(survey_yr == "1971-1975")
+```
+
+15-19 (light green) extends to 1971-1975 because that is NHES III
+NHESII:6-11 year olds
+NHESIII:12-17 year olds 
+there is a gap for 1995-1998 for nhanes, not a survey year; did not find bmi for the younger age groups for continuous NHANES either (99-2018) 
+
+## weighted ghp
+
+```{r ghp.means, echo=FALSE, message=FALSE}
+ghp = read_xlsx("./bmi_means.xlsx", sheet = 6) 
+ghp = ghp %>% 
+  mutate(period = as.factor(period),
+         AGE_GRP = as.factor(AGE_GRP),
+         race = as.factor(race),
+         gender = as.factor(gender),
+         period = dplyr::recode(period,
+                                `1988-1994` = "1",
+                                `1999-2002` = "2",
+                                `2003-2006` = "3",
+                                `2007-2010` = "4",
+                                `2011-2014` = "5",
+                                `2015-2018` = "6"),
+         period = as.numeric(period))
+
+ghp %>% ggplot(aes(x=period, y=Mean, color=AGE_GRP))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "weighted means of ghp % from 1988-2018 among 0-49 year olds",
+       ylab = "average % ghp") +  scale_x_continuous(breaks=c(1,2,3,4,5,6),
+  labels=c(`1` = "1988-1994",
+           `2` = "1999-2002",`3` = "2003-2006", `4` = "2007-2010", `5` = "2011-2014", `6` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+## diet
+
+```{r}
+read.csv("./nhanesdiet.csv")
+```
+
