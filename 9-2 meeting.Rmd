@@ -1,0 +1,132 @@
+---
+title: "8-2 meeting"
+author: "lulu zhang"
+date: "8/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sas7bdat)
+library(tidyr)
+library(tidyverse)
+library(SASxport)
+library(dplyr)
+require(haven)
+library(car)
+library(readxl)
+library(here)
+library(skimr) # install.packages('skimr')
+library(kableExtra) # install.packages('kableExtra')
+require(ggplot2)
+library(janitor)
+library(ggplot2)
+require(sandwich)
+require(msm)
+library(forcats)
+require(ggplot2)
+require(gridExtra)
+```
+
+```{r load.data., include=FALSE}
+nhes1 = read.csv("./nhesI_per.csv") %>% 
+  janitor::clean_names()
+nhes2 = read.csv("./nhesII_per.csv")%>% 
+  janitor::clean_names()
+nhes3 = read.csv("./nhesIII_per.csv")%>% 
+  janitor::clean_names()
+nhanes1 = read.csv("./nhanes1_per.csv")%>% 
+  janitor::clean_names()
+nhanes2 = read.csv("./nhanes2_per.csv")%>% 
+  janitor::clean_names() %>% 
+  mutate(race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other"),
+         race = fct_explicit_na(race, na_level = "Other"),
+         gender = dplyr::recode(gender, `0` = "Male",
+                                `1` = "Female"))
+nhanes3 = read.csv("./nhanes3_per.csv")%>% 
+  janitor::clean_names()
+newnhanes = read.csv("./new_per.csv")%>% 
+  janitor::clean_names()
+nhis = read.csv("./nhis_per.csv")%>% 
+  janitor::clean_names() %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other"),
+        gender = dplyr::recode(gender, `0` = "Male",
+                               `1` = "Female"))
+
+
+```
+
+
+## bmi
+```{r bmi, message=FALSE, echo=FALSE}
+hes2bmi = nhes2  %>%
+  select(age_grp, period, race, gender, bmi, weight, psu, strata)
+hes3bmi = nhes3 %>%
+  select(age_grp, period, race, gender, bmi, weight, psu, strata)
+hanes1bmi = nhanes1 %>%
+  select(age_grp, period, race, gender, bmi, weight, psu, strata)
+hanes2bmi = nhanes2 %>%
+  select(age_grp, period, race, gender, bmi, weight, psu, strata)
+hanes3bmi = nhanes3 %>%
+  select(age_grp, period, race, gender, bmi, weight, psu, strata)
+newhanesbmi = newnhanes %>%
+  select(age_grp, period, race, gender, bmi, weight, psu, strata)
+nhisbmi = nhis%>%
+  select(age_grp, period, race, gender, bmi, weight, psu, strata)
+
+a = rbind(hes2bmi, hes3bmi, hanes1bmi)
+b = rbind(hanes2bmi, hanes3bmi, newhanesbmi)
+bmi_all = rbind(a, b, nhisbmi)%>% filter(age_grp %in% c(0:9)) %>% 
+mutate(
+          age_grp = as.factor(age_grp),
+          age_grp = dplyr::recode(age_grp,
+                                  `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+bmi_all = bmi_all  %>% 
+  filter(period %in% c(0:11),
+         between(bmi, 10,50), 
+         race %in% c("White", "Black", "Other"),
+         gender %in% c("Male", "Female")) %>% 
+   group_by(age_grp, period, race, gender) %>% 
+   mutate(weighted_bmi = weighted.mean(bmi, weight))
+
+## plot
+bmi_all %>% 
+ggplot(aes(x=period, weighted_bmi, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "weighted means of bmi from 1963-2018 among 0-49 year olds",
+       ylab = "average bmi") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+
+
+```
+
+
+## hypertension
+
+## thyroid disease
+
+## ghp 
