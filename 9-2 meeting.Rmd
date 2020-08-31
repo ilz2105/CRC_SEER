@@ -36,7 +36,9 @@ nhes2 = read.csv("./nhesII_per.csv")%>%
 nhes3 = read.csv("./nhesIII_per.csv")%>% 
   janitor::clean_names()
 nhanes1 = read.csv("./nhanes1_per.csv")%>% 
-  janitor::clean_names()
+  janitor::clean_names()  %>% 
+  mutate(weight_all = coalesce(all_samp_weight_1_35, all_sampweight_1_65, detailed_weight_66_100, detailed_weight_1_35, detailed_weight_1_65))
+
 nhanes2 = read.csv("./nhanes2_per.csv")%>% 
   janitor::clean_names() %>% 
   mutate(race = dplyr::recode(race,
@@ -59,7 +61,8 @@ nhis = read.csv("./nhis_per.csv")%>%
                               `1` = "Black",
                               `2` = "Other"),
         gender = dplyr::recode(gender, `0` = "Male",
-                               `1` = "Female"))
+                               `1` = "Female")) %>% 
+  rename(hbp = hypertension)
 
 
 ```
@@ -127,6 +130,156 @@ ggplot(aes(x=period, weighted_bmi, color=age_grp))+
 
 ## hypertension
 
+```{r hbp, echo=FALSE, message=FALSE}
+
+## subset and merge datasets with hbp as a variable
+hes1hbp = nhes1 %>%
+  select(age_grp, period, race, gender, hbp, weight)
+
+hanes3hbp = nhanes3 %>%
+  select(age_grp, period, race, gender, hbp, weight, psu, strata)
+newhaneshbp = newnhanes %>%
+  select(age_grp, period, race, gender, hbp, weight, psu, strata) 
+nhishbp = nhis%>%
+  select(age_grp, period, race, gender, hbp, weight, psu, strata)
+
+a = rbind(hanes3hbp, newhaneshbp, nhishbp)
+hbp = full_join(hes1hbp, a) 
+
+# export to sas to get weighted means for responses
+hbpmeans = read_xlsx("./bmi_means.xlsx", sheet = 9) %>% 
+  filter(age_grp %in% c(0:9))
+  
+hbpmeans = hbpmeans%>%   mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"),
+         VarLevel = as.numeric(as.factor(VarLevel))) ## 1 = no, 2 == yes
+
+
+## plot 'no hbp'
+hbpmeans %>% 
+  filter(VarLevel == 1,
+         Mean < 1)%>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender,  scales = "free_y")+
+  labs(
+ title = "weighted proportion with no hypertension among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+## plot 'yes' hbp
+hbpmeans %>% 
+  filter(VarLevel == 2,
+         Mean < 1)%>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender,  scales = "free_y")+
+  labs(
+ title = "weighted proportion with hypertension among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+hbpmeans %>% 
+  filter(VarLevel == 1,
+         gender == "Female", race == "Other",
+         Mean < 1)
+```
+
 ## thyroid disease
+
+```{r thyroid,  echo=FALSE, message=FALSE}
+hanes1thy = nhanes1%>%
+  select(age_grp, period, race, gender, thyroid_disease, weight, psu, strata) %>% 
+  rename(ever_had_thyroid_d = thyroid_disease)
+hanes2thy = nhanes2%>%
+  select(age_grp, period, race, gender, ever_had_thyroid_d, weight, psu, strata)
+hanes3thy = nhanes3%>%
+  select(age_grp, period, race, gender, ever_had_thyroid_d, weight, psu, strata)
+newhanesthy = newnhanes%>%
+  select(age_grp, period, race, gender, ever_had_thyroid_d, weight, psu, strata)
+nhisthy = nhis%>%
+  select(age_grp, period, race, gender, ever_had_thyroid_d, weight, psu, strata)
+
+thy = rbind(hanes1thy, hanes2thy, hanes3thy, newhanesthy, nhisthy)
+
+
+thymeans = read_xlsx("./bmi_means.xlsx", sheet = 10)%>% mutate(age_grp = as.numeric(age_grp)) %>% 
+  filter(age_grp %in% c(0:9))
+  
+thymeans = thymeans%>%   mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49")) ## 1 = no, 2 == yes
+
+thymeans %>% 
+  filter(VarLevel == 0,
+         Mean < 1)%>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender,  scales = "free_y")+
+  labs(
+ title = "weighted proportion with no thyroid disease among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+## plot 'yes' thyroid
+thymeans %>% 
+  filter(VarLevel == 1,
+         Mean < 1)%>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~race+gender,  scales = "free_y")+
+  labs(
+ title = "weighted proportion with thyroid disease among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+Other Male has a lot of 1.0000s for age groups 15-29 for period 2, 
+15-34, 40-49 for period 3, 20-44 for period 5, very low sample sizes
 
 ## ghp 
