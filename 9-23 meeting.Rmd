@@ -1,0 +1,307 @@
+---
+title: "9-23 meeting"
+author: "lulu zhang"
+date: "9/17/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(sas7bdat)
+library(tidyr)
+library(tidyverse)
+library(SASxport)
+library(dplyr)
+require(haven)
+library(car)
+library(readxl)
+library(here)
+library(skimr) # install.packages('skimr')
+library(kableExtra) # install.packages('kableExtra')
+require(ggplot2)
+library(janitor)
+library(ggplot2)
+require(sandwich)
+require(msm)
+library(forcats)
+require(ggplot2)
+require(gridExtra)
+library(rlang)
+library(dplyr)
+library(BBmisc)
+library(caret)
+library(sjPlot)
+library(sjlabelled)
+library(sjmisc)
+library(ggplot2)
+library(readxl)
+```
+
+
+```{r load.data, echo=FALSE, message=FALSE, include=FALSE}
+seer = read.csv("./groupedseer.csv") %>% 
+  janitor::clean_names()
+seerrf=read.csv("./seerrf.csv") %>% 
+  mutate(period = as.factor(period))
+seergender = read.csv("./seergender.csv")
+
+allrf = read.csv("./seerrf.csv")%>% 
+  janitor::clean_names() 
+
+malerf = read.csv("./seermrf.csv")%>% 
+  janitor::clean_names()
+
+femrf = read.csv("./seerfrf.csv")%>% 
+  janitor::clean_names()
+
+```
+
+
+```{r seer.inc, echo=FALSE, message=FALSE}
+seer %>%
+  filter(gender == "Female") %>% 
+  ggplot( aes(x = period, y = rate))+
+   geom_line(aes(color = race)) +
+  facet_wrap(~age_grp, scales = "free_y")+
+   labs(
+    title = "CRC inc rates from 1975-2014 among Females",
+    x = "Periods (5-year groups)",
+    y = "Inc Rate of CRC",
+    caption = "by 5-year age groups (25-49)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+  scale_x_continuous(breaks=c(1,2,3,4,5,6,7,8,9),
+  labels=c(`1` = "1975-1979",`2` = "1980-1984", `3` = "1985-1989", `4`= "1990-1994",
+           `5` = "1995-1999", `6` = "2000-2004", `7` = "2005-2009", `8` = "2010-2014", `9` = "2015-2018"))
+
+seer %>%mutate(period = as.numeric(period)) %>%
+  filter(gender == "Male") %>% 
+  ggplot( aes(x = period, y = rate))+
+   geom_line(aes(color = race)) +
+  facet_wrap(~age_grp, scales = "free_y")+
+   labs(
+    title = "CRC inc rates from 1975-2014 among males ",
+    x = "Periods (5-year groups)",
+    y = "Inc Rate of CRC",
+    caption = "by 5-year age groups (25-49)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+  scale_x_continuous(breaks=c(3,4,5,6,7,8,9,10,11),
+  labels=c(`3` = "1975-1979",`2` = "1980-1984", `3` = "1985-1989", `4`= "1990-1994",
+           `5` = "1995-1999", `6` = "2000-2004", `7` = "2005-2009", `8` = "2010-2014", `9` = "2015-2018"))
+```
+
+## seer incidence trends among males and females by age groups
+```{r, include=FALSE}
+seerf = seergender %>% filter(gender == "Female") %>% 
+  mutate(period = as.factor(period))
+seerm = seergender %>% filter(gender == "Male")%>% 
+  mutate(period = as.factor(period))
+
+seerf%>%mutate(period = as.numeric(period),
+               age_grp = as.factor(age_grp),
+               age_grp = dplyr::recode(age_grp,
+                                       `6` = "25-29",
+                                       `7` = "30-34",
+                                       `8` = "35-39",
+                                       `9` = "40-44",
+                                       `10` = "45-49"))  %>% 
+  ggplot( aes(x = period, y = rate))+
+   geom_line(aes(color = age_grp)) +
+   labs(
+    title = "CRC inc rates from 1975-2014 among females ",
+    x = "Periods (5-year groups)",
+    y = "Inc Rate of CRC",
+    caption = "by 5-year age groups (25-49)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+  scale_x_continuous(breaks=c(1,2,3,4,5,6,7,8,9),
+  labels=c(`1` = "1975-1979",`2` = "1980-1984", `3` = "1985-1989", `4`= "1990-1994",
+           `5` = "1995-1999", `6` = "2000-2004", `7` = "2005-2009", `8` = "2010-2014", `9` = "2015-2018"))
+
+seerm%>%mutate(period = as.numeric(period),
+               age_grp = as.factor(age_grp),
+               age_grp = dplyr::recode(age_grp,
+                                       `6` = "25-29",
+                                       `7` = "30-34",
+                                       `8` = "35-39",
+                                       `9` = "40-44",
+                                       `10` = "45-49"))  %>% 
+  ggplot( aes(x = period, y = rate))+
+   geom_line(aes(color = age_grp)) +
+   labs(
+    title = "CRC inc rates from 1975-2014 among males ",
+    x = "Periods (5-year groups)",
+    y = "Inc Rate of CRC",
+    caption = "by 5-year age groups (25-49)")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+  scale_x_continuous(breaks=c(1,2,3,4,5,6,7,8,9),
+  labels=c(`1` = "1975-1979",`2` = "1980-1984", `3` = "1985-1989", `4`= "1990-1994",
+           `5` = "1995-1999", `6` = "2000-2004", `7` = "2005-2009", `8` = "2010-2014", `9` = "2015-2018"))
+```
+
+normalize all risk factors for glm!
+then plot beta estimates acorss periods, with seer incidence rates overlayed
+then another panel with age groups as x-axis 
+
+```{r bmiplot, echo=FALSE, message=FALSE}
+## this is just betas from bmi from excel
+femalebmi = read_xlsx("./univariate models.xlsx", sheet = 8) %>%
+  janitor::clean_names() %>% 
+  mutate(beta_estimate = as.numeric(beta_estimate),
+         period = as.factor(period))
+
+ age_grp <- femalebmi$age_grp
+ggplot(femalebmi, aes(x = period, y = beta_estimate)) + 
+  geom_point()+
+  labs(title = "beta estimates for period and bmi levels-overweight and obese
+       for females")+
+geom_hline(yintercept=age_grp, col = "red")
+
+malebmi = read_xlsx("./univariate models.xlsx", sheet = 9) %>%
+  janitor::clean_names() %>% 
+  mutate(beta_estimate = as.numeric(beta_estimate),
+         period = as.factor(period))
+ age_grp <- malebmi$age_grp
+ggplot(malebmi, aes(x = period, y = beta_estimate)) + 
+  geom_point()+
+  geom_line(aes(x = period, y = beta_estimate ))+
+  labs(title = "beta estimates for period and bmi levels-overweight and obese
+       for males") +
+geom_hline(yintercept=age_grp, col = "red")
+
+```
+
+## try to overlay seer incidence over beta estimates
+This is a plot of the model of beta coefficients for ghp female and male respectively
+first and third plot are without rf, second and fourth are with RF
+```{r ghp, echo=FALSE, message=FALSE}
+ghpctsmean = read.csv("./ghpctsmean.csv")
+ghpseer = merge(ghpctsmean, seer, by= c("period", "age_grp", "race", "gender"), all = TRUE) %>% 
+  mutate(period = as.factor(period))
+ghpseer$period <- relevel(ghpseer$period, ref = "9")
+fghp = ghpseer %>% 
+  filter(gender == "Female")
+mghp = ghpseer %>% 
+  filter(gender == "Male")
+
+#female
+femghp <- glm(tot_count ~ age_grp + period, data=fghp, family=poisson(), offset = lnpop)
+ghpf <- glm(tot_count ~ age_grp + period+ zVar, data=fghp, family=poisson(), offset = lnpop)
+summary(femghp)
+summary(ghpf)
+
+##plot betas from the model fit
+plot_model(femghp, transform = NULL)
+plot_model(ghpf, transform = NULL)
+
+#male
+maleghp <- glm(tot_count ~ age_grp + period, data=mghp, family=poisson(), offset = lnpop)
+ghpm <- glm(tot_count ~ age_grp + period+ zVar, data=mghp, family=poisson(), offset = lnpop)
+summary(maleghp)
+summary(ghpm)
+
+##plot betas from the model fit
+plot_model(maleghp, transform = NULL)
+plot_model(ghpm, transform = NULL)
+
+
+
+```
+
+plot bmi using plot_model function
+```{r bmi.plot}
+female = seerrf %>% 
+  filter(gender == "Female")
+male = seerrf %>% 
+  filter(gender == "Male")
+
+female$period <- relevel(female$period, ref = "9")
+
+male$period <- relevel(male$period, ref = "9")
+#female
+seerbase <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+seerbmi1 <- glm(tot_count ~ age_grp + period+bmimean1, data=female, family=poisson(), offset = lnpop)
+seerbmi2 <- glm(tot_count ~ age_grp + period+bmimean2, data=female, family=poisson(), offset = lnpop)
+seerbmi23 <- glm(tot_count ~ age_grp + period+bmimean1 +bmimean2, data=female, family=poisson(), offset = lnpop)
+summary(seerbase)
+summary(seerbmi1)
+summary(seerbmi2)
+summary(seerbmi23)
+plot_model(seerbase)
+plot_model(seerbmi1)
+plot_model(seerbmi2)
+plot_model(seerbmi23)
+
+
+### males
+seerbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+seerbmi1m <- glm(tot_count ~ age_grp + period+bmimean1, data=male, family=poisson(), offset = lnpop)
+seerbmi2m <- glm(tot_count ~ age_grp + period+bmimean2, data=male, family=poisson(), offset = lnpop)
+seerbmi23m <- glm(tot_count ~ age_grp + period+bmimean1 +bmimean2, data=male, family=poisson(), offset = lnpop)
+summary(seerbasem)
+summary(seerbmi1m)
+summary(seerbmi2m)
+summary(seerbmi23m)
+##baseline model
+plot_model(seerbasem)
+##just add overweight
+plot_model(seerbmi1m)
+## just add obese
+plot_model(seerbmi2m)
+## add both overweight and obese
+plot_model(seerbmi23m)
+```
+
+
+
+##trying to get two y axis
+```{r}
+library(plotly)
+femalebmi = femalebmi %>% 
+  mutate(period = as.factor(period)) 
+seerf
+
+x = full_join(femalebmi, seerf) %>% 
+  mutate(age_grp = as.factor(age_grp))
+obese <- x$obese
+ plot_ly(x)%>%
+    add_trace(x=~period,y=~rate,name = 'incidence rate',type = 'scatter',mode = 'lines+markers', connectgaps = TRUE, group_by = age_grp) %>%
+    add_trace(x=~period,y=~beta_estimate,name = 'beta estimates',type = 'scatter',mode = 'lines+markers',connectgaps = TRUE,yaxis = "y2") %>%
+    layout(title = 'bmi beta estimates with incidence rates',
+       xaxis = list(title = "incidence rates"),
+       yaxis2 = list(side = 'right', overlaying = "y", title = 'beta estimates', showgrid = FALSE, zeroline = FALSE))
+ 
+
+```
+
+```{r diabetes, echo=FALSE, message=FALSE}
+#####female
+diabetesbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+diabetesyesf <- glm(tot_count ~ age_grp + period+diabetesmean, data=female, family=poisson(), offset = lnpop)
+summary(diabetesbasef)
+summary(diabetesyesf)
+plot_model(diabetesbasef)
+plot_model(diabetesyesf)
+####male
+diabetesbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+diabetesyesm <- glm(tot_count ~ age_grp + period+diabetesmean, data=male, family=poisson(), offset = lnpop)
+summary(diabetesbasem)
+summary(diabetesyesm)
+plot_model(diabetesbasem)
+plot_model(diabetesyesm)
+```
+
+## hbp 
+```{r hbp}
+#####female
+hbpbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+hbpyesf <- glm(tot_count ~ age_grp + period+hbpmean, data=female, family=poisson(), offset = lnpop)
+summary(hbpbasef)
+summary(hbpyesf)
+plot_model(hbpbasef)
+plot_model(hbpyesf)
+####male
+hbpbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+hbpyesm <- glm(tot_count ~ age_grp + period+hbpmean, data=male, family=poisson(), offset = lnpop)
+summary(hbpbasem)
+summary(hbpyesm)
+plot_model(hbpbasem)
+plot_model(hbpyesm)
+```
+
