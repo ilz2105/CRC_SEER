@@ -1,5 +1,5 @@
 ---
-title: "9-23 meeting"
+title: "9-23 meeting-by gender only"
 author: "lulu zhang"
 date: "9/17/2020"
 output: html_document
@@ -90,7 +90,7 @@ seer %>%mutate(period = as.numeric(period)) %>%
 ```
 
 ## seer incidence trends among males and females by age groups
-```{r, include=FALSE}
+```{r, echo=FALSE, message=FALSE}
 seerf = seergender %>% filter(gender == "Female") %>% 
   mutate(period = as.factor(period))
 seerm = seergender %>% filter(gender == "Male")%>% 
@@ -135,9 +135,11 @@ seerm%>%mutate(period = as.numeric(period),
            `5` = "1995-1999", `6` = "2000-2004", `7` = "2005-2009", `8` = "2010-2014", `9` = "2015-2018"))
 ```
 
-normalize all risk factors for glm!
+normalize all continuous risk factors for glm!
 then plot beta estimates acorss periods, with seer incidence rates overlayed
 then another panel with age groups as x-axis 
+
+**plot_model, transform = NULL keeps betas, doesnt give IRR
 
 ```{r bmiplot, echo=FALSE, message=FALSE}
 ## this is just betas from bmi from excel
@@ -182,7 +184,7 @@ mghp = ghpseer %>%
 
 #female
 femghp <- glm(tot_count ~ age_grp + period, data=fghp, family=poisson(), offset = lnpop)
-ghpf <- glm(tot_count ~ age_grp + period+ zVar, data=fghp, family=poisson(), offset = lnpop)
+ghpf <- glm(tot_count ~ age_grp + period+ Zvarghp, data=fghp, family=poisson(), offset = lnpop)
 summary(femghp)
 summary(ghpf)
 
@@ -192,7 +194,7 @@ plot_model(ghpf, transform = NULL)
 
 #male
 maleghp <- glm(tot_count ~ age_grp + period, data=mghp, family=poisson(), offset = lnpop)
-ghpm <- glm(tot_count ~ age_grp + period+ zVar, data=mghp, family=poisson(), offset = lnpop)
+ghpm <- glm(tot_count ~ age_grp + period+ Zvarghp, data=mghp, family=poisson(), offset = lnpop)
 summary(maleghp)
 summary(ghpm)
 
@@ -203,9 +205,12 @@ plot_model(ghpm, transform = NULL)
 
 
 ```
+females: `0.03392` p-value =0.1
+males: `0.01976` p-value not sig
 
-plot bmi using plot_model function
-```{r bmi.plot}
+
+# plot bmi using plot_model function
+```{r bmi.plot, echo=FALSE, message=FALSE}
 female = seerrf %>% 
   filter(gender == "Female")
 male = seerrf %>% 
@@ -247,11 +252,17 @@ plot_model(seerbmi2m)
 ## add both overweight and obese
 plot_model(seerbmi23m)
 ```
-
+females: overweight: `0.2331`  pvalue = 0.05
+         obese: `1.1592`  pvalue < 0.001 
+         both:`0.40173` p-value not significant `0.88458` pvalue = 0.001  
+males:   overweight: `0.06799` but not significant
+         obese: `0.64594` pvalue  = 0.01 
+         both:betas = `-0.59642` and `1.657976` respectively, both with pvalues < 0.000
 
 
 ##trying to get two y axis
-```{r}
+tried to plot beta estimates and incidence on 2 y-xis for female bmi but having trouble plotting the age groups by groups 
+```{r, echo=FALSE, message=FALSE}
 library(plotly)
 femalebmi = femalebmi %>% 
   mutate(period = as.factor(period)) 
@@ -270,6 +281,7 @@ obese <- x$obese
 
 ```
 
+## diabetes plot model
 ```{r diabetes, echo=FALSE, message=FALSE}
 #####female
 diabetesbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
@@ -286,6 +298,9 @@ summary(diabetesyesm)
 plot_model(diabetesbasem)
 plot_model(diabetesyesm)
 ```
+females, diabetes beta = `2.117081` pvalue < 0
+males, beta = `1.852686` pvalue < 0.01
+
 
 ## hbp 
 ```{r hbp}
@@ -305,3 +320,463 @@ plot_model(hbpbasem)
 plot_model(hbpyesm)
 ```
 
+females: beta `1.526870` pvalue < 0
+males: beta `1.23044` pvalue < 0
+
+
+
+## alc per week tertiles
+```{r alc.trt, echo=FALSE, message=FALSE}
+#####female
+alcbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+alc1f <- glm(tot_count ~ age_grp + period+alcmean1t, data=female, family=poisson(), offset = lnpop)
+alc2f <- glm(tot_count ~ age_grp + period+alcmean2t, data=female, family=poisson(), offset = lnpop)
+alc23f <- glm(tot_count ~ age_grp + period+alcmean1t+alcmean2t, data=female, family=poisson(), offset = lnpop)
+summary(alcbasef)
+summary(alc1f)
+summary(alc2f)
+summary(alc23f)
+plot_model(alcbasef)
+plot_model(alc1f)
+plot_model(alc2f)
+plot_model(alc23f)
+####male
+alcbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+alc1m <- glm(tot_count ~ age_grp + period+alcmean1t, data=male, family=poisson(), offset = lnpop)
+alc2m <- glm(tot_count ~ age_grp + period+alcmean2t, data=male, family=poisson(), offset = lnpop)
+alc23m <- glm(tot_count ~ age_grp + period+alcmean1t+alcmean2t, data=male, family=poisson(), offset = lnpop)
+summary(alcbasem)
+summary(alc1m)
+summary(alc2m)
+summary(alc23m)
+plot_model(alcbasem)
+plot_model(alc1m)
+plot_model(alc2m)
+plot_model(alc23m)
+```
+female: tert 1: `3.3922` p-value not sig
+        tert 2: `-8.73245` p-value = 0.05
+        both:  `8.73245` p-value = 0.05 & NA for tert 2
+male:   tert 1: `0.27470`  p-value not sig
+        tert 2: `0.881117` p-value not sig
+        both: `4.61802` & `5.44251` p-values not sig
+error note: *Model matrix is rank deficient. Parameters period3 were not estimable.Model matrix is rank deficient. Parameters age_grp were not estimable.Model matrix is rank deficient. Parameters age_grp, alcmean2t were not estimable*
+-apparently it means not enough data points?
+
+
+## thyroid-go back to this 
+```{r thyroid, echo=FALSE, message=FALSE}
+#####female
+thybasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+thyyesf <- glm(tot_count ~ age_grp + period+thymean1, data=female, family=poisson(), offset = lnpop)
+summary(thybasef)
+summary(thyyesf)
+plot_model(thybasef)
+plot_model(thyyesf)
+####male
+thybasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+thyyesm <- glm(tot_count ~ age_grp + period+thymean1, data=male, family=poisson(), offset = lnpop)
+summary(thybasem)
+summary(thyyesm)
+plot_model(thybasem)
+plot_model(thyyesm)
+```
+female: `-1.03625` p-value < 0
+male: `-2.06222`  p-value < 0.01
+
+
+## meat per week-continuous and normalized
+```{r cts.meat, echo=FALSE, message=FALSE}
+ctsmeatbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+ctsmeatf <- glm(tot_count ~ age_grp + period+Zvarmeatmean, data=female, family=poisson(), offset = lnpop)
+summary(ctsmeatbasef)
+summary(ctsmeatf)
+plot_model(ctsmeatbasef)
+plot_model(ctsmeatf)
+####male
+ctsmeatbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+ctsmeatm <- glm(tot_count ~ age_grp + period+Zvarmeatmean, data=male, family=poisson(), offset = lnpop)
+summary(ctsmeatbasem)
+summary(ctsmeatm)
+plot_model(ctsmeatbasem)
+plot_model(ctsmeatm)
+```
+female: `0.020368` p-value not sig
+male: `-0.18063` p-value < 0
+
+
+## current smoker-yes
+Female, then male 
+
+```{r smk, echo=FALSE, message=TRUE}
+smkbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+smkf <- glm(tot_count ~ age_grp + period+smkmean1, data=female, family=poisson(), offset = lnpop)
+summary(smkbasef)
+summary(smkf)
+plot_model(smkbasef)
+plot_model(smkf)
+####male
+smkbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+smkm <- glm(tot_count ~ age_grp + period+smkmean1, data=male, family=poisson(), offset = lnpop)
+summary(smkbasem)
+summary(smkm)
+plot_model(smkbasem)
+plot_model(smkm)
+```
+female: `0.44640` p-value not sig
+male: `-0.02905` p-value not sig
+
+
+## fiber, tertiles
+female then male
+```{r fiber, echo=FALSE, message=FALSE}
+#####female
+fibbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+fib1f <- glm(tot_count ~ age_grp + period+fib1mean, data=female, family=poisson(), offset = lnpop)
+fib2f <- glm(tot_count ~ age_grp + period+fib2mean, data=female, family=poisson(), offset = lnpop)
+fib3f <- glm(tot_count ~ age_grp + period+fib3mean, data=female, family=poisson(), offset = lnpop)
+fib4f <- glm(tot_count ~ age_grp + period+fib4mean, data=female, family=poisson(), offset = lnpop)
+fib14f <- glm(tot_count ~ age_grp + period+fib1mean+fib2mean+fib3mean+fib4mean, data=female, family=poisson(), offset = lnpop)
+summary(fibbasef)
+summary(fib1f)
+summary(fib2f)
+summary(fib3f)
+summary(fib4f)
+summary(fib14f)
+plot_model(fibbasef)
+plot_model(fib1f)
+plot_model(fib2f)
+plot_model(fib3f)
+plot_model(fib4f)
+plot_model(fib14f)
+####male
+fibbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+fib1m <- glm(tot_count ~ age_grp + period+fib1mean, data=female, family=poisson(), offset = lnpop)
+fib2m <- glm(tot_count ~ age_grp + period+fib2mean, data=female, family=poisson(), offset = lnpop)
+fib3m <- glm(tot_count ~ age_grp + period+fib3mean, data=female, family=poisson(), offset = lnpop)
+fib4m <- glm(tot_count ~ age_grp + period+fib4mean, data=female, family=poisson(), offset = lnpop)
+fib14m <- glm(tot_count ~ age_grp + period+fib1mean+fib2mean+fib3mean+fib4mean, data=female, family=poisson(), offset = lnpop)
+summary(fibbasem)
+summary(fib1m)
+summary(fib2m)
+summary(fib3m)
+summary(fib4m)
+summary(fib14m)
+plot_model(fibbasem)
+plot_model(fib1m)
+plot_model(fib2m)
+plot_model(fib3m)
+plot_model(fib4m)
+plot_model(fib14m)
+```
+female: quintile 1: `0.74232` p-value < 0.05
+        quintile 2: `-1.02493` p-value < 0
+        quintile 3: `-1.44639` p-value < 0
+        quintile 4: `-0.27829` p-value not sig
+        all:`-0.25427` p-value not sig; ` -0.80995` p-value =0.05; `-1.38366` p-value < 0; `-0.21427` p-value not sig
+male:   quintile 1: `0.74232`  p-value = 0.05
+        quintile 2: `-1.02493` p-value < 0
+        quintile 3: `-1.44639` p-value < 0
+        quintile 4: `-0.27829` p-value not sig
+        all: `-0.25427` p-value not sig; `-0.80995` p-value = 0.05; `-1.38366` p-value < 0; `-0.21427` p-value not sig
+
+## protein
+```{r protein, echo = FALSE, message=FALSE}
+#####female
+protbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+prot1f <- glm(tot_count ~ age_grp + period+prot1mean, data=female, family=poisson(), offset = lnpop)
+prot2f <- glm(tot_count ~ age_grp + period+prot2mean, data=female, family=poisson(), offset = lnpop)
+prot12f <- glm(tot_count ~ age_grp + period+prot1mean+prot2mean, data=female, family=poisson(), offset = lnpop)
+summary(protbasef)
+summary(prot1f)
+summary(prot2f)
+summary(prot12f)
+plot_model(protbasef)
+plot_model(prot1f)
+plot_model(prot2f)
+plot_model(prot12f)
+####male
+protbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+prot1m <- glm(tot_count ~ age_grp + period+prot1mean, data=male, family=poisson(), offset = lnpop)
+prot2m <- glm(tot_count ~ age_grp + period+prot2mean, data=male, family=poisson(), offset = lnpop)
+prot12m <- glm(tot_count ~ age_grp + period+prot1mean+prot2mean, data=male, family=poisson(), offset = lnpop)
+summary(protbasem)
+summary(prot1m)
+summary(prot2m)
+summary(prot12m)
+plot_model(protbasem)
+plot_model(prot1m)
+plot_model(prot2m)
+plot_model(prot12m)
+```
+female: tert 1: `0.740271` p-value < 0
+        tert 2: `0.072968` p-value not sig
+        both: `0.41500` p-value = 0.1 & `-0.21583` p-value = 0.05
+mal:    tert 1: `1.257292` p-value < 0
+        tert 2: `-0.306681` p-value < 0 
+        both: `1.48662` p-value < 0 & `0.23015` p-value = 0.05
+
+## fat- tertile
+```{r fat}
+#####female
+fatbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+fat1f <- glm(tot_count ~ age_grp + period+fat1mean, data=female, family=poisson(), offset = lnpop)
+fat2f <- glm(tot_count ~ age_grp + period+fat2mean, data=female, family=poisson(), offset = lnpop)
+fat12f <- glm(tot_count ~ age_grp + period+fat1mean+fat2mean, data=female, family=poisson(), offset = lnpop)
+summary(fatbasef)
+summary(fat1f)
+summary(fat2f)
+summary(fat12f)
+plot_model(fatbasef)
+plot_model(fat1f)
+plot_model(fat2f)
+plot_model(fat12f)
+####male
+fatbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+fat1m <- glm(tot_count ~ age_grp + period+fat1mean, data=male, family=poisson(), offset = lnpop)
+fat2m <- glm(tot_count ~ age_grp + period+fat2mean, data=male, family=poisson(), offset = lnpop)
+fat12m <- glm(tot_count ~ age_grp + period+fat1mean+fat2mean, data=male, family=poisson(), offset = lnpop)
+summary(fatbasem)
+summary(fat1m)
+summary(fat2m)
+summary(fat12m)
+plot_model(fatbasem)
+plot_model(fat1m)
+plot_model(fat2m)
+plot_model(fat12m)
+```
+female: tert 1: `-0.352030` p-value not sig
+        tert 2: `0.624416` p-value < 0
+        both: `-0.405388` & `-0.053022` p-value both not sig
+male:   tert 1: `0.276805` p-value not sig
+        tert 2: `-0.563022` p-value < 0
+        both: `-1.352290` & `-1.143851` both p-value < 0  
+
+
+
+## saturated fat- tertiles
+try continuous saturated fat as well
+```{r}
+#####female
+satfatbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+satfat1f <- glm(tot_count ~ age_grp + period+satfat1mean, data=female, family=poisson(), offset = lnpop)
+satfat2f <- glm(tot_count ~ age_grp + period+satfat2mean, data=female, family=poisson(), offset = lnpop)
+satfat12f <- glm(tot_count ~ age_grp + period+satfat1mean+satfat2mean, data=female, family=poisson(), offset = lnpop)
+summary(satfatbasef)
+summary(satfat1f)
+summary(satfat2f)
+summary(satfat12f)
+plot_model(satfatbasef)
+plot_model(satfat1f)
+plot_model(satfat2f)
+plot_model(satfat12f)
+####male
+satfatbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+satfat1m <- glm(tot_count ~ age_grp + period+satfat1mean, data=male, family=poisson(), offset = lnpop)
+satfat2m <- glm(tot_count ~ age_grp + period+satfat2mean, data=male, family=poisson(), offset = lnpop)
+satfat12m <- glm(tot_count ~ age_grp + period+satfat1mean+satfat2mean, data=male, family=poisson(), offset = lnpop)
+summary(satfatbasem)
+summary(satfat1m)
+summary(satfat2m)
+summary(satfat12m)
+plot_model(satfatbasem)
+plot_model(satfat1m)
+plot_model(satfat2m)
+plot_model(satfat12m)
+```
+female: tert 2: `0.265451` p-value = 0.05
+        tert 3: `-0.158180` p-value not sig
+        both: `0.32037` & `0.06747` both p-value not sig
+male:   tert 2: `1.180400` p-value < 0
+        tert 3: `-0.709995` p-value < 0
+        both: `0.803931` p-value = 0.1 & `-0.303046` p-value not sig
+
+
+## fat-continuous&normalized
+```{r, echo=FALSE, message=FALSE}
+ctsfatbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+ctsfatf <- glm(tot_count ~ age_grp + period+Zvarfat, data=female, family=poisson(), offset = lnpop)
+summary(ctsfatbasef)
+summary(ctsfatf)
+plot_model(ctsfatbasef)
+plot_model(ctsfatf)
+####male
+ctsfatbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+ctsfatm <- glm(tot_count ~ age_grp + period+Zvarfat, data=male, family=poisson(), offset = lnpop)
+summary(ctsfatbasem)
+summary(ctsfatm)
+plot_model(ctsfatbasem)
+plot_model(ctsfatm)
+```
+female: `-0.016701` p-value not significant
+male: `-0.044007` p-value < 0
+
+
+## saturated fat-continuous & normalized
+```{r, echo=FALSE, message=FALSE}
+ctssatfatbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+ctssatfatf <- glm(tot_count ~ age_grp + period+ Zvarsatfat, data=female, family=poisson(), offset = lnpop)
+summary(ctssatfatbasef)
+summary(ctssatfatf)
+plot_model(ctssatfatbasef)
+plot_model(ctssatfatf)
+####male
+ctssatfatbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+ctssatfatm <- glm(tot_count ~ age_grp + period+Zvarsatfat, data=male, family=poisson(), offset = lnpop)
+summary(ctssatfatbasem)
+summary(ctssatfatm)
+plot_model(ctssatfatbasem)
+plot_model(ctssatfatm)
+```
+female: `-0.03444` p-value = 0.1
+male: `-0.050498` p-value < 0
+
+## cholesterol-tertiles
+```{r cholesterol, echo=FALSE, message=FALSE}
+#####female
+cholbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+chol1f <- glm(tot_count ~ age_grp + period+chol1mean, data=female, family=poisson(), offset = lnpop)
+chol2f <- glm(tot_count ~ age_grp + period+chol2mean, data=female, family=poisson(), offset = lnpop)
+chol12f <- glm(tot_count ~ age_grp + period+chol1mean+chol2mean, data=female, family=poisson(), offset = lnpop)
+summary(cholbasef)
+summary(chol1f)
+summary(chol2f)
+summary(chol12f)
+plot_model(cholbasef)
+plot_model(chol1f)
+plot_model(chol2f)
+plot_model(chol12f)
+####male
+cholbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+chol1m <- glm(tot_count ~ age_grp + period+chol1mean, data=male, family=poisson(), offset = lnpop)
+chol2m <- glm(tot_count ~ age_grp + period+chol2mean, data=male, family=poisson(), offset = lnpop)
+chol12m <- glm(tot_count ~ age_grp + period+chol1mean+chol2mean, data=male, family=poisson(), offset = lnpop)
+summary(cholbasem)
+summary(chol1m)
+summary(chol2m)
+summary(chol12m)
+plot_model(cholbasem)
+plot_model(chol1m)
+plot_model(chol2m)
+plot_model(chol12m)
+```
+females: tert 2: `-0.0709`, not significant; 
+         tert 3 : `-0.258943` not significant
+         both: `-0.094288` & `-0.162715` both not significant
+males:   tert 2: `-0.011317`, not significant; 
+         tert 3 : `-0.315512` not significant
+         both: `-0.050203` not significant & `-0.388569` p-value < 0
+
+
+## continuos alcohol per week- normalized
+```{r}
+
+ctsalcbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+ctsalcf <- glm(tot_count ~ age_grp + period+Zvaralcctsmean, data=female, family=poisson(), offset = lnpop)
+summary(ctsalcbasef)
+summary(ctsalcf)
+plot_model(ctsalcbasef)
+plot_model(ctsalcf)
+####male
+ctsalcbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+ctsalcm <- glm(tot_count ~ age_grp + period+Zvaralcctsmean, data=male, family=poisson(), offset = lnpop)
+summary(ctsalcbasem)
+summary(ctsalcm)
+plot_model(ctsalcbasem)
+plot_model(ctsalcm)
+```
+males beta = `0.214506`, p-value not significant, 
+females beta = `-0.6534` pvalue = `0.05`
+*period 3 is na for males and age groups is na for females? note says model matrix is rank deficient*
+
+
+## continuous protein- normalized
+```{r cts.prot, echo = FALSE, message = FALSE}
+ctsprotbasef <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+ctsprotf <- glm(tot_count ~ age_grp + period+Zvarprotmean, data=female, family=poisson(), offset = lnpop)
+summary(ctsprotbasef)
+summary(ctsprotf)
+plot_model(ctsprotbasef)
+plot_model(ctsprotf)
+####male
+ctsprotbasem <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+ctsprotm <- glm(tot_count ~ age_grp + period+Zvarprotmean, data=male, family=poisson(), offset = lnpop)
+summary(ctsprotbasem)
+summary(ctsprotm)
+plot_model(ctsprotbasem)
+plot_model(ctsprotm)
+```
+females: `(-0.044528)` pvalue = 0.05 
+males: `(-0.047513)` pvalue < 0.000
+
+
+## start adding diff RF into model
+```{r}
+##female
+fitf <- glm(tot_count ~ age_grp + period, data=female, family=poisson(), offset = lnpop)
+fbmidia <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean, data=female, family=poisson(), offset = lnpop)
+fbmidiahbp <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean+hbpmean, data=female, family=poisson(), offset = lnpop)
+fthy <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean+hbpmean+thymean1, data=female, family=poisson(), offset = lnpop)
+fghp <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean+hbpmean+thymean1+ Zvarghp, data=female, family=poisson(), offset = lnpop)
+falc1 <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean+hbpmean+thymean1+ Zvarghp+alcmean1t, data=female, family=poisson(), offset = lnpop)
+falc12 <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean+hbpmean+thymean1+ Zvarghp+alcmean1t+alcmean2t, data=female, family=poisson(), offset = lnpop)
+fmeatz <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean +hbpmean+thymean1+Zvarghp+Zvarmeatmean, data=female, family=poisson(), offset = lnpop) ## had to remove alc 
+summary(fitf)
+summary(fbmidia)
+summary(fbmidiahbp)
+summary(fthy)
+summary(fghp)
+summary(falc1)
+summary(falc12)
+summary(fmeatz)
+
+##male
+fitm <- glm(tot_count ~ age_grp + period, data=male, family=poisson(), offset = lnpop)
+mbmidia <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean, data=male, family=poisson(), offset = lnpop)
+mbmidiahbp <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean +hbpmean, data=male, family=poisson(), offset = lnpop)
+mthy <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean +hbpmean+thymean1, data=male, family=poisson(), offset = lnpop)
+mghp <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean +hbpmean+thymean1+Zvarghp, data=male, family=poisson(), offset = lnpop)
+malc1 <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean +hbpmean+thymean1+Zvarghp+alcmean1t, data=male, family=poisson(), offset = lnpop)
+malc12 <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean +hbpmean+thymean1+Zvarghp+alcmean1t+alcmean2t, data=male, family=poisson(), offset = lnpop)
+mmeatz <- glm(tot_count ~ age_grp + period + bmimean1 + bmimean2 +diabetesmean +hbpmean+thymean1+Zvarghp+alcmean1t+alcmean2t+Zvarmeatmean, data=male, family=poisson(), offset = lnpop) ## this caused NAs for all RF except overweight, gave message: Coefficients: (9 not defined because of singularities)-highly corrrelated variables 
+
+
+summary(fitm)
+summary(mbmidia)
+summary(mbmidiahbp)
+summary(mthy)
+summary(mghp)
+summary(malc1)
+summary(malc12)
+summary(mmeatz)
+
+plot_model(fbmidia)
+plot_model(mbmidia)
+
+plot_model(fbmidiahbp)
+plot_model(mbmidiahbp)
+
+plot_model(fthy)
+plot_model(mthy)
+
+plot_model(mghp)
+plot_model(fghp)
+
+plot_model(falc1)
+plot_model(falc12)
+plot_model(malc1)
+plot_model(malc12)
+
+plot_model(fmeatz)
+plot_model(mmeatz)
+
+```
+
+**notes:
+-female: 
+        *diabetes becomes negative once you add in other RF despite being positive in its own model
+        *model falc1: age_grp is not defined (NA) due to singularities
+        *model falc12: age_grp & alc tert 2 NA due to singularities
+        *fmeatz: could not run with alc means in the model, period betas disappear???
+-male: 
+        *mmeatz model gives message: Coefficients: (9 not defined because of singularities)-obese, diabetes, hbp, thyroid, ghp, alc1&2, meat are          highly correlated apparently
