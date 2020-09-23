@@ -1,0 +1,269 @@
+---
+title: "9-23 by race and gender"
+author: "lulu zhang"
+date: "9/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sas7bdat)
+library(tidyr)
+library(tidyverse)
+library(SASxport)
+library(dplyr)
+require(haven)
+library(car)
+library(readxl)
+library(here)
+library(skimr) # install.packages('skimr')
+library(kableExtra) # install.packages('kableExtra')
+require(ggplot2)
+library(janitor)
+library(ggplot2)
+require(sandwich)
+require(msm)
+library(forcats)
+require(ggplot2)
+require(gridExtra)
+library(rlang)
+library(dplyr)
+library(BBmisc)
+library(caret)
+library(sjPlot)
+library(sjlabelled)
+library(sjmisc)
+library(ggplot2)
+library(readxl)
+```
+
+```{r load.data, include=FALSE}
+seerrf=read.csv("./seerrf.csv") %>% 
+  mutate(period = as.factor(period))
+```
+
+### glm by race & gender 
+ 
+```{r subset.race, include=FALSE}
+wm =seerrf %>% filter(race == "White",
+                   gender == "Male")
+
+bm =seerrf %>% filter(race == "Black",
+                   gender == "Male")
+
+om =seerrf %>% filter(race == "Other",
+                   gender == "Male")
+
+wf =seerrf %>% filter(race == "White",
+                   gender == "Female")
+
+bf =seerrf %>% filter(race == "Black",
+                   gender == "Female")
+
+of =seerrf %>% filter(race == "Other",
+                   gender == "Female")
+```
+
+
+### bmi
+
+# white female
+```{r bmi.glm, echo=FALSE}
+
+wfbmi <- glm(tot_count ~ age_grp + period, data=wf, family=poisson(), offset = lnpop)
+bmi1wf <- glm(tot_count ~ age_grp + period+ bmimean1, data=wf, family=poisson(), offset = lnpop)
+bmi2wf <- glm(tot_count ~ age_grp + period+ bmimean2, data=wf, family=poisson(), offset = lnpop)
+bmi12wf <- glm(tot_count ~ age_grp + period+ bmimean1+bmimean2, data=wf, family=poisson(), offset = lnpop)
+summary(wfbmi)
+summary(bmi1wf)
+summary(bmi2wf)
+summary(bmi12wf)
+
+##plot betas from the model fit
+plot_model(wfbmi, transform = NULL)
+plot_model(bmi1wf, transform = NULL)
+plot_model(bmi2wf, transform = NULL)
+plot_model(bmi12wf, transform = NULL)
+```
+white females, negalitve, some p-values = 0.05
+
+# white male
+```{r wmbmi, echo=FALSE}
+wmbmi <- glm(tot_count ~ age_grp + period, data=wm, family=poisson(), offset = lnpop)
+bmi1wm <- glm(tot_count ~ age_grp + period+ bmimean1, data=wm, family=poisson(), offset = lnpop)
+bmi2wm <- glm(tot_count ~ age_grp + period+ bmimean2, data=wm, family=poisson(), offset = lnpop)
+bmi12wm <- glm(tot_count ~ age_grp + period+ bmimean1+bmimean2, data=wm, family=poisson(), offset = lnpop)
+summary(wmbmi)
+summary(bmi1wm)
+summary(bmi2wm)
+summary(bmi12wm)
+
+##plot betas from the model fit
+plot_model(wmbmi, transform = NULL)
+plot_model(bmi1wm, transform = NULL)
+plot_model(bmi2wm, transform = NULL)
+plot_model(bmi12wm, transform = NULL)
+```
+white males, negative but not significant
+
+
+# black female
+```{r bfbmi, echo=FALSE}
+bfbmi <- glm(tot_count ~ age_grp + period, data=bf, family=poisson(), offset = lnpop)
+bmi1bf <- glm(tot_count ~ age_grp + period+ bmimean1, data=bf, family=poisson(), offset = lnpop)
+bmi2bf <- glm(tot_count ~ age_grp + period+ bmimean2, data=bf, family=poisson(), offset = lnpop)
+bmi12bf <- glm(tot_count ~ age_grp + period+ bmimean1+bmimean2, data=bf, family=poisson(), offset = lnpop)
+summary(bfbmi)
+summary(bmi1bf)
+summary(bmi2bf)
+summary(bmi12bf)
+
+##plot betas from the model fit
+plot_model(bfbmi, transform = NULL)
+plot_model(bmi1bf, transform = NULL)
+plot_model(bmi2bf, transform = NULL)
+plot_model(bmi12bf, transform = NULL)
+```
+
+
+
+# black male
+```{r bmbmi, echo=FALSE}
+bmbmi <- glm(tot_count ~ age_grp + period, data=bm, family=poisson(), offset = lnpop)
+bmi1bm <- glm(tot_count ~ age_grp + period+ bmimean1, data=bm, family=poisson(), offset = lnpop)
+bmi2bm <- glm(tot_count ~ age_grp + period+ bmimean2, data=bm, family=poisson(), offset = lnpop)
+bmi12bm <- glm(tot_count ~ age_grp + period+ bmimean1+bmimean2, data=bm, family=poisson(), offset = lnpop)
+summary(bmbmi)
+summary(bmi1bm)
+summary(bmi2bm)
+summary(bmi12bm)
+
+##plot betas from the model fit
+plot_model(bmbmi, transform = NULL)
+plot_model(bmi1bm, transform = NULL)
+plot_model(bmi2bm, transform = NULL)
+plot_model(bmi12bm, transform = NULL)
+```
+black males betas negative but not significant
+
+
+
+# other female
+```{r ofbmi, echo=FALSE}
+ofbmi <- glm(tot_count ~ age_grp + period, data=of, family=poisson(), offset = lnpop)
+bmi1of <- glm(tot_count ~ age_grp + period+ bmimean1, data=of, family=poisson(), offset = lnpop)
+bmi2of <- glm(tot_count ~ age_grp + period+ bmimean2, data=of, family=poisson(), offset = lnpop)
+bmi12of <- glm(tot_count ~ age_grp + period+ bmimean1+bmimean2, data=of, family=poisson(), offset = lnpop)
+summary(ofbmi)
+summary(bmi1of)
+summary(bmi2of)
+summary(bmi12of)
+
+##plot betas from the model fit
+plot_model(ofbmi, transform = NULL)
+plot_model(bmi1of, transform = NULL)
+plot_model(bmi2of, transform = NULL)
+plot_model(bmi12of, transform = NULL)
+```
+other females: betas mostly negative, none are significant
+
+# other male
+```{r ombmi, echo=FALSE}
+ombmi <- glm(tot_count ~ age_grp + period, data=om, family=poisson(), offset = lnpop)
+bmi1om <- glm(tot_count ~ age_grp + period+ bmimean1, data=om, family=poisson(), offset = lnpop)
+bmi2om <- glm(tot_count ~ age_grp + period+ bmimean2, data=om, family=poisson(), offset = lnpop)
+bmi12om <- glm(tot_count ~ age_grp + period+ bmimean1+bmimean2, data=om, family=poisson(), offset = lnpop)
+summary(ombmi)
+summary(bmi1om)
+summary(bmi2om)
+summary(bmi12om)
+
+##plot betas from the model fit
+plot_model(ombmi, transform = NULL)
+plot_model(bmi1om, transform = NULL)
+plot_model(bmi2om, transform = NULL)
+plot_model(bmi12om, transform = NULL)
+```
+other males: obese is postive with -value = 0.05, overweight is negative and not significant in combined model, neither is significant in separate models
+
+
+## ghp
+
+# white female
+```{r wfghp,  echo=FALSE}
+wfghp <- glm(tot_count ~ age_grp + period, data=wf, family=poisson(), offset = lnpop)
+ghpwf <- glm(tot_count ~ age_grp + period+ Zvarghp, data=wf, family=poisson(), offset = lnpop)
+summary(wfghp)
+summary(ghpwf)
+
+##plot betas from the model fit
+plot_model(wfghp, transform = NULL)
+plot_model(ghpwf, transform = NULL)
+```
+white female: `-0.08217` pvalue = 0.05
+
+# white male
+```{r wmghp, echo=FALSE}
+wmghp <- glm(tot_count ~ age_grp + period, data=wm, family=poisson(), offset = lnpop)
+ghpwm <- glm(tot_count ~ age_grp + period+ Zvarghp, data=wm, family=poisson(), offset = lnpop)
+summary(wmghp)
+summary(ghpwm)
+
+##plot betas from the model fit
+plot_model(wmghp, transform = NULL)
+plot_model(ghpwm, transform = NULL)
+```
+white male `-0.02722` not significant 
+
+#black female
+```{r bfghp, echo=FALSE}
+wfghp <- glm(tot_count ~ age_grp + period, data=wf, family=poisson(), offset = lnpop)
+ghpwf <- glm(tot_count ~ age_grp + period+ Zvarghp, data=wf, family=poisson(), offset = lnpop)
+summary(wfghp)
+summary(ghpwf)
+
+##plot betas from the model fit
+plot_model(wfghp, transform = NULL)
+plot_model(ghpwf, transform = NULL)
+```
+black female: `-0.08217` pvalue = 0.05
+
+#black male
+```{r bmghp, echo=FALSE}
+wmghp <- glm(tot_count ~ age_grp + period, data=wm, family=poisson(), offset = lnpop)
+ghpwm <- glm(tot_count ~ age_grp + period+ Zvarghp, data=wm, family=poisson(), offset = lnpop)
+summary(wmghp)
+summary(ghpwm)
+
+##plot betas from the model fit
+plot_model(wmghp, transform = NULL)
+plot_model(ghpwm, transform = NULL)
+```
+black male: `-0.02722` not significant
+
+# other female
+```{r ofghp, echo=FALSE}
+wfghp <- glm(tot_count ~ age_grp + period, data=wf, family=poisson(), offset = lnpop)
+ghpwf <- glm(tot_count ~ age_grp + period+ Zvarghp, data=wf, family=poisson(), offset = lnpop)
+summary(wfghp)
+summary(ghpwf)
+
+##plot betas from the model fit
+plot_model(wfghp, transform = NULL)
+plot_model(ghpwf, transform = NULL)
+```
+other female: `-0.08217` pvalue = 0.05
+
+
+#other male
+```{r omghp, echo=FALSE}
+wmghp <- glm(tot_count ~ age_grp + period, data=wm, family=poisson(), offset = lnpop)
+ghpwm <- glm(tot_count ~ age_grp + period+ Zvarghp, data=wm, family=poisson(), offset = lnpop)
+summary(wmghp)
+summary(ghpwm)
+
+##plot betas from the model fit
+plot_model(wmghp, transform = NULL)
+plot_model(ghpwm, transform = NULL)
+```
+other male: `-0.02722` not significant
