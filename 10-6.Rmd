@@ -1,0 +1,292 @@
+---
+title: "10-6"
+author: "lulu zhang"
+date: "10/6/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sas7bdat)
+library(tidyr)
+library(tidyverse)
+library(SASxport)
+library(dplyr)
+require(haven)
+library(car)
+library(readxl)
+library(here)
+library(skimr) # install.packages('skimr')
+library(kableExtra) # install.packages('kableExtra')
+require(ggplot2)
+library(janitor)
+library(ggplot2)
+require(sandwich)
+require(msm)
+library(forcats)
+require(ggplot2)
+require(gridExtra)
+library(rlang)
+library(dplyr)
+library(sjPlot)
+library (ridge)
+```
+
+```{r load.data, include=FALSE}
+seerrf = read.csv("./seer_rf_10-6.csv") %>% janitor::clean_names() %>% 
+  mutate(period = as.factor(period)) 
+
+seerrf$period <- relevel(seerrf$period, ref = "9")
+```
+
+***notes on overdispersion: In this case, our residual deviance is 3000 for 397 degrees of freedom. The rule of thumb is that the ratio of deviance to df should be 1, but it is 7.6, indicating severe overdispersion
+
+## subset by race and gender
+```{r subset.by.race.gender, include=FALSE}
+wf = seerrf %>% 
+  filter(gender == "Female",
+         race == "White")
+
+wm = seerrf %>% 
+  filter(gender == "Male",
+         race == "White")
+
+bf = seerrf %>% 
+  filter(gender == "Female",
+         race == "Black")
+
+bm = seerrf %>% 
+  filter(gender == "Male",
+         race == "Black")
+
+of = seerrf %>% 
+  filter(gender == "Female",
+         race == "Other")
+
+om = seerrf %>% 
+  filter(gender == "Male",
+         race == "Other")
+```
+
+```{r white.female , echo=FALSE, message=FALSE}
+baselinewf <- glm(tot_count ~ period +age_grp, data = wf, family = quasipoisson(), offset = lnpop)
+dia <- glm(tot_count ~ period +age_grp+diabetes, data = wf, family = poisson(), offset = lnpop)
+hbp <- glm(tot_count ~ period +age_grp+hbp, data = wf, family = quasipoisson(), offset = lnpop)
+thy <- glm(tot_count ~ period +age_grp+thyroid_d, data = wf, family = quasipoisson(), offset = lnpop)
+
+
+ctsfib <- glm(tot_count ~ period +age_grp+weightedfibcts, data = wf, family = poisson(), offset = lnpop)
+ctsfat <- glm(tot_count ~ period +age_grp+weightedfatcts, data = wf, family = poisson(), offset = lnpop)
+ctssatfat <- glm(tot_count ~ period +age_grp+weightedsatfatcts, data = wf, family = poisson(), offset = lnpop)
+
+fib2 <- glm(tot_count ~ period +age_grp+fiber2mean, data = wf, family = poisson(), offset = lnpop)
+fat2 <- glm(tot_count ~ period +age_grp+fat2mean, data = wf, family = poisson(), offset = lnpop)
+satfat2 <- glm(tot_count ~ period +age_grp+satfat2mean, data = wf, family = poisson(), offset = lnpop)
+
+summary(dia)
+summary(hbp)
+summary(thy)
+
+summary(ctsfib)
+summary(ctsfat)
+summary(ctssatfat)
+summary(fib2)
+summary(fat2)
+summary(satfat2)
+
+plot_model(baselinewf, transform = NULL)
+plot_model(dia, transform = NULL)
+plot_model(hbp, transform = NULL)
+plot_model(thy, transform = NULL)
+plot_model(ctsfib, transform = NULL)
+plot_model(ctsfat, transform = NULL)
+plot_model(ctssatfat, transform = NULL)
+```
+
+```{r white.male , echo=FALSE, message=FALSE}
+baselinewm <- glm(tot_count ~ period +age_grp, data = wm, family = quasipoisson(), offset = lnpop)
+diawm <- glm(tot_count ~ period +age_grp+diabetes, data = wm, family = quasipoisson(), offset = lnpop)
+hbpwm <- glm(tot_count ~ period +age_grp+hbp, data = wm, family = quasipoisson(), offset = lnpop)
+thywm <- glm(tot_count ~ period +age_grp+thyroid_d, data = wm, family = quasipoisson(), offset = lnpop)
+obesewm <- glm(tot_count ~ period +age_grp+obese, data = wm, family = quasipoisson(), offset = lnpop)
+overwm <- glm(tot_count ~ period +age_grp+overweight, data = wm, family = quasipoisson(), offset = lnpop)
+bmiwm <- glm(tot_count ~ period +age_grp+overweight+obese, data = wm, family = poisson(), offset = lnpop) ### colinear
+hswm <- glm(tot_count ~ period +age_grp+homesmoker, data = wm, family = quasipoisson(), offset = lnpop) ##quasi
+
+ctsfibwm <- glm(tot_count ~ period +age_grp+weightedfibcts, data = wm, family = quasipoisson(), offset = lnpop)
+ctsfatwm <- glm(tot_count ~ period +age_grp+weightedfatcts, data = wm, family = quasipoisson(), offset = lnpop)
+ctssatfatwm <- glm(tot_count ~ period +age_grp+weightedsatfatcts, data = wm, family = quasipoisson(), offset = lnpop)
+
+fib2wm <- glm(tot_count ~ period +age_grp+fiber2mean, data = wm, family = quasipoisson(), offset = lnpop)
+fat2wm <- glm(tot_count ~ period +age_grp+fat2mean, data = wm, family = quasipoisson(), offset = lnpop)
+satfat2wm <- glm(tot_count ~ period +age_grp+satfat2mean, data = wm, family = quasipoisson(), offset = lnpop)
+
+summary(diawm)
+summary(hbpwm)
+summary(thywm)
+summary(obesewm)
+summary(overwm)
+summary(bmiwm)
+summary(hswm)
+summary(hswmp)
+
+summary(ctsfib)
+summary(ctsfat)
+summary(ctssatfat)
+summary(fib2)
+summary(fat2)
+summary(satfat2)
+
+plot_model(baselinewf, transform = NULL)
+plot_model(dia, transform = NULL)
+plot_model(hbp, transform = NULL)
+plot_model(thy, transform = NULL)
+plot_model(ctsfib, transform = NULL)
+plot_model(ctsfat, transform = NULL)
+plot_model(ctssatfat, transform = NULL)
+
+car::vif(diawm)
+```
+
+## try ridge regression
+
+### Step 1: Read in data, partition, remove outcome variable and standardize 
+```{r data_prep}
+set.seed(100)
+ 
+rrwf = wf %>% 
+  dplyr::select(age_grp, period, tot_count, obese, overweight,  diabetes )
+rrwf <- na.omit(rrwf)
+#Reminder of non-tidyverse way to create data partition
+#train.indices<-createDataPartition(y=bc.data$outcome,p=0.7,list=FALSE)
+
+training.data<-rrwf$tot_count %>% createDataPartition(p=1, list=F)
+train.data<-rrwf[training.data, ]
+
+
+#Store outcome 
+life.exp.train<-train.data$tot_count
+#life.exp.test<-test.data$life_exp
+
+x.train<-model.matrix(tot_count~., train.data)[,-1]
+#x.test<-model.matrix(life_exp~., test.data)[,-1]
+```
+
+### Step 2: Running the algorithms on the training data
+
+The glmnet package allows us to run all three of the penalized models using the same format. The value of the alpha parameter dictates whether it is a ride regression, lasso or elastic net. A value of 0 is the ridge regression, the 1 is a lasso and any value in between 0 and 1 will provide an elastic net. The package also takes an input for lambda, but by default it will vary lambda and provide you output for 100 options. There is also an option to use cross-validation to choose the optimal labmda. That requires use of cv.glmnet().
+
+
+```{r reg_algorithms}
+set.seed(100)
+
+#Ridge Regression
+
+model.1<-glmnet(x.train, life.exp.train, alpha=0, standardize = TRUE)
+
+plot(model.1, xvar="lambda", label=TRUE)
+plot(model.1, xvar="dev", label=TRUE)
+
+model.1$beta[,1]
+
+#LASSO
+
+model.2<-glmnet(x.train, life.exp.train, alpha=1, standardize = TRUE)
+
+plot(model.2, xvar="lambda", label=TRUE)
+plot(model.2, xvar="dev", label=TRUE)
+
+model.2$beta[,1]
+
+
+
+```
+
+### Step 3: Using cross-validation to select the optimal value for lambda (tuning parameter)
+
+Reminder when lambda is 0, you will obtain OLS regressio coefficients (i.e. no regularization)
+When lambda approaches large numbers, the regression coefficents will shrink toward 0
+
+```{r}
+model.1.cv<-cv.glmnet(x.train, life.exp.train, alpha=0)
+plot(model.1.cv)
+model.1.cv$lambda.min
+
+model.1.train.final<-glmnet(x.train, life.exp.train, alpha=0, lambda=model.1.cv$lambda.min)
+coef(model.1.train.final)
+
+```
+
+### Step 4: Apply model to test set and evaluate model
+```{r}
+model.1.test.pred<-model.1.train.final %>% predict(x.train) %>% as.vector()
+
+data.frame(RMSE=RMSE(model.1.test.pred, life.exp.train), RSQ=R2(model.1.test.pred, life.exp.train))
+
+```
+
+### Step 5:  Using caret to select best tuning parameters
+I will demonstrate how you can use the caret package to construct penalized regressions.By default, caret will vary both alpha and lambda to select the best values via cross-validation. Because the alpha is not set at 0 or 1, this is typically results in an elastic net. But, you can set the alpha level at a fixed value in order to obtain ridge or lasso results.
+
+tuneLength sets the number of combinations of different values of alpha and lambda to compare.
+
+```{r}
+
+set.seed(123)
+en.model<- train(
+  tot_count ~., data = train.data, method = "glmnet",
+  trControl = trainControl("cv", number = 10),
+ tuneLength=10
+  )
+
+en.model$bestTune
+
+# Model coefficients
+coef(en.model$finalModel, en.model$bestTune$lambda)
+
+# Make predictions
+
+en.pred <- en.model %>% predict(x.train)
+
+# Model prediction performance
+data.frame(
+  RMSE = RMSE(en.pred, train.data$tot_count),
+  Rsquare = R2(en.pred, train.data$tot_count)
+)
+```
+### Exercise: 
+The following code will allow you to fix the alpha (I have it set to 0 for a ridge) and run either a ridge or lasso analysis. Use that code to run both ridge and Lasso using the caret package and obtain coefficients and evaluation metrics. 
+
+If the caret package will select the optimal alpha and lambda value, why might you still choose lasso or ridge over elastic net (or an automated process of choosing alpha as in caret)? 
+
+```{r}
+#Create grid to search lambda
+lambda<-10^seq(-3,3, length=100)
+
+set.seed(100)
+
+model.4<-train(
+  tot_count ~., data=train.data, method="glmnet", trControl=trainControl("cv", number=10), tuneGrid=expand.grid(alpha=0, lambda=lambda)
+)
+
+
+```
+
+
+```{r}
+linRidgeMod <- linearRidge(tot_count ~ . , data = train.data)  # the ridge regression model
+#>  No more Negative Coefficients!
+#>   (Intercept)           GNP    Unemployed  Armed.Forces    Population          Year     Employed
+#> -1.015385e+03  3.715498e-02  1.328002e-02  1.707769e-02  1.294903e-01  5.318930e-01 5.976266e-01
+
+predicted <- predict(linRidgeMod, train.data)  # predict on test data
+compare <- cbind (actual=testData$response, predicted)  # combine
+#>      actual predicted
+#> 1949   88.2  88.68584
+#> 1953   99.0  99.26104
+#> 1957  108.4 106.99370
+#> 1959  112.6 110.95450
+mean (apply(compare, 1, min)/apply(compare, 1, max)) # calculate accuracy
+```
+
+

@@ -1,0 +1,1282 @@
+---
+title: "10-1"
+author: "lulu zhang"
+date: "10/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sas7bdat)
+library(tidyr)
+library(tidyverse)
+library(SASxport)
+library(dplyr)
+require(haven)
+library(car)
+library(readxl)
+library(here)
+library(skimr) # install.packages('skimr')
+library(kableExtra) # install.packages('kableExtra')
+require(ggplot2)
+library(janitor)
+library(ggplot2)
+require(sandwich)
+require(msm)
+library(forcats)
+require(ggplot2)
+require(gridExtra)
+library(rlang)
+library(dplyr)
+library(sjPlot)
+```
+
+```{r load.data, include=FALSE}
+nhanesI = read.csv("./nhanesI_10_2.csv") %>% 
+  dplyr::select(-age_grp) %>% 
+  mutate(
+    period = case_when(seqn %in% c(1:25061) ~ 2)
+  )
+
+nhanesI = nhanesI %>% 
+  mutate(age_grp = case_when(age %in% c(0:4) ~ 0,
+                             age %in% c(5:9) ~ 1,
+                             age %in% c(10:14) ~ 2,
+                             age %in% c(15:19) ~ 3,
+                             age %in% c(20:24) ~ 4,
+                             age %in% c(25:29) ~ 5,
+                             age %in% c(30:34) ~ 6,
+                             age %in% c(35:39) ~ 7,
+                             age %in% c(40:44) ~ 8,
+                             age %in% c(45:49) ~ 9)) %>% 
+  rename(ever_had_thyroid_d = thyroid_disease,
+         cholesterol = cholesterol_mg)
+
+nhanesII = read.csv("./nhanesII_10_2.csv") %>% 
+  mutate(period = case_when(seqn %in% c(1:27796) ~ 3),
+         gender = dplyr::recode(gender,
+                                `0` = "Male",
+                                `1` = "Female"),
+         race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other"))
+         
+nhanesIII = read.csv("./nhanes3_10_2.csv") %>% 
+  mutate(home_smokers = as.factor(home_smokers))
+
+nhanesIII = read.csv("./nhanes3_10_2.csv") %>% 
+  mutate(home_smokers = as.factor(home_smokers))
+
+n3diet = read.csv("./n3diet_10_5.csv")
+
+nhanes3 = full_join(nhanesIII, n3diet) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender)) %>% 
+  select(-X, -var1) %>% 
+  rename(tot_sat_fat = sat_fatty_acid)
+
+## new nhanes with ghp, diet variables, bmi, and alcohol variables!!! need to get age groups and period
+new = read.csv("./newnhanes_10_1_2020.csv") %>% dplyr::select(-X, -x, -x_2) %>% 
+  janitor::clean_names() %>% filter(age %in% c(0:49)) %>% 
+  mutate(age_grp = case_when(age %in% c(0:4) ~ 0,
+                             age %in% c(5:9) ~ 1,
+                             age %in% c(10:14) ~ 2,
+                             age %in% c(15:19) ~ 3,
+                             age %in% c(20:24) ~ 4,
+                             age %in% c(25:29) ~ 5,
+                             age %in% c(30:34) ~ 6,
+                             age %in% c(35:39) ~ 7,
+                             age %in% c(40:44) ~ 8,
+                             age %in% c(45:49) ~ 9),
+         period = case_when(survey_yr == "1999-2000" ~ 7,
+                            survey_yr == "2001-2002" ~ 8,
+                            survey_yr == "2003-2004" ~ 8,
+                            survey_yr == "2005-2006" ~ 9,
+                            survey_yr == "2007-2008" ~ 9,
+                            survey_yr == "2009-2010" ~ 10,
+                            survey_yr == "2011-2012" ~ 10,
+                            survey_yr == "2013-2014" ~ 10,
+                            survey_yr == "2015-2016" ~ 11,
+                            survey_yr == "2017-2018" ~ 11)) 
+
+weights = read.csv("./new_weights.csv") %>% 
+  rename(strata = sdmvstra,
+         psu = sdmvpsu) %>% 
+  dplyr::select(seqn, strata, psu, weight)
+
+newnhanes = full_join(new, weights) %>% 
+  dplyr::select( -wtint2yr, -wtint4yr, -wtmec2yr, -wtmec4yr, -sddsrvyr, -sdmvstra, -sdmvpsu) %>% 
+  mutate(gender = as.factor(gender),
+         gender = dplyr::recode(gender,
+                                `0` = "Male",
+                                `1` = "Female"),
+         race = as.factor(race),
+         race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other")) %>% 
+  rename(ghp = lbxgh, 
+         fat = total_fat)
+
+nhis = read.csv("./nhis_per.csv")%>% 
+  janitor::clean_names() %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         race = dplyr::recode(race,
+                              `0` = "White",
+                              `1` = "Black",
+                              `2` = "Other"),
+        gender = dplyr::recode(gender, `0` = "Male",
+                               `1` = "Female")) %>% 
+  rename(hbp = hypertension)
+
+nhesI = read.csv("./nhesI_per.csv")
+nhesII = read.csv("./nhesII_per.csv")
+nhesIII = read.csv("./nhesIII_per.csv")
+seer = read.csv("./groupedseer.csv") %>% 
+  mutate(age_grp = as.factor(age_grp))
+```
+
+
+
+## alc 
+```{r echo=FALSE, message=FALSE}
+newnhanes %>%mutate(age_grp = as.factor(age_grp),
+                    avg_drinks_per_day_pastyr = as.numeric(avg_drinks_per_day_pastyr)) %>%  group_by(race, gender, age_grp, period)  %>% 
+  summarize(weightedalc = weighted.mean(avg_drinks_per_day_pastyr, weight, na.rm = TRUE))%>% 
+ggplot(aes(x=period, weightedalc, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "averaged weighted means of alc consumed per week from 1985-2018 among 0-49 year olds",
+       y = "weighted mean for ghp%") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+``
+
+```{r merge.data, include=FALSE}
+a = full_join(nhanesI, nhanesII) %>% 
+  dplyr::select(-X) %>% 
+  mutate(gender = as.factor(gender),
+         race = as.factor(race))
+b = full_join(nhanes3, newnhanes) %>% 
+  mutate(gender = as.factor(gender),
+         race = as.factor(race),
+         home_smokers = as.factor(home_smokers))
+c = full_join(a,b) %>% 
+  mutate(survey_yr = as.factor(survey_yr),
+         age_grp = as.factor(age_grp)) %>% 
+  dplyr::select(-detailed_weight_1_35,-detailed_weight_1_65, -all_samp_weight_1_35,
+                -all_sampweight_1_65,-detailed_weight_66_100, -detailed_weight_1_100, -med_hist_weight, -brth_yr, -doe, -birth_yr, -birthyr, -dob)
+
+
+c = c %>% 
+  mutate(gender = as.factor(gender),
+         race = as.factor(race),
+         age_grp = as.numeric(age_grp),
+    diabetes = as.factor(diabetes),
+         diabetes = dplyr::recode(diabetes,
+                           `0` = "No", 
+                           `1` = "Yes",
+                           `2` = NA_character_),
+         ever_had_thyroid_d = as.factor(ever_had_thyroid_d),
+         ever_had_thyroid_d = dplyr::recode(ever_had_thyroid_d,
+                                  `0` = "No",
+                                  `1` = "Yes",
+                                  `2` = NA_character_),
+         hbp = as.factor(hbp),
+         hbp = dplyr::recode(hbp,
+                             `0` = "No",
+                             `1` = "Yes",
+                             `2` = NA_character_))
+
+
+nhisx = nhis %>%  
+  mutate(diabetes = as.factor(diabetes),
+         diabetes = dplyr::recode(diabetes,
+                           `0` = "No", 
+                           `1` = "Yes",
+                           `2` = NA_character_),
+         ever_had_thyroid_d = as.factor(ever_had_thyroid_d),
+         ever_had_thyroid_d = dplyr::recode(ever_had_thyroid_d,
+                                  `0` = "No",
+                                  `1` = "Yes"),
+        age_grp = as.factor(age_grp),
+         hbp = as.factor(hbp),
+         hbp = dplyr::recode(hbp,
+                            `0` = "No",
+                             `1` = "Yes",
+                             `2` = NA_character_),
+        age_grp = as.numeric(age_grp)) %>% 
+  dplyr::select(-heightkid, -weightkid, -thyroidyrc, -height_in, -weight_lb, -bmi)%>% 
+  rename(bmi=bmicalc) %>% 
+  filter(age_grp %in% c(0:9))
+write.csv(nhisx, "./nhisx_10-6.csv")
+
+
+hanes_his = full_join(c, nhisx) %>% 
+  mutate(gender = as.factor(gender),
+         race = as.factor(race),
+         ever_had_thyroid_d = as.factor(ever_had_thyroid_d)) %>% 
+  select(-var1) %>% 
+  filter(race %in% c("White", "Black", "Other"),
+         gender %in% c("Female", "Male"))
+
+nhesI
+nhesII
+nhesIII
+
+hes1_2 = full_join(nhesI, nhesII)
+nhes_all = full_join(hes1_2, nhesIII) %>% janitor::clean_names() %>% 
+  mutate(diabetes = as.factor(diabetes),
+         diabetes = dplyr::recode(diabetes,
+                           `0` = "No", 
+                           `1` = "Yes"),
+         hbp = as.factor(hbp),
+         hbp = dplyr::recode(hbp,
+                             `0` = "No",
+                             `1` = "Yes"),
+         age_grp = as.numeric(age_grp)) %>% 
+  select(-num_cigs_smoked_daily, -var1)
+  
+
+nhanes_nhes = full_join(nhes_all, c) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp))
+
+write.csv(nhanes_nhes, "./nhanesnhes.csv")
+seer_rf = full_join(seer, nhanes_nhes ) 
+
+seer_rf = seer_rf %>% 
+  mutate(home_smokers = dplyr::recode(home_smokers, 
+                                      `0` = "No",
+                                      `1` = "Yes",
+                                      `2` = NA_character_,
+                                      `missing` = NA_character_),
+         current_smoker = as.factor(current_smoker),
+         current_smoker = dplyr::recode(current_smoker,
+                                        `0` = "No",
+                                        `1` = "Yes",
+                                        `2` = NA_character_,
+                                        `3` = NA_character_),
+         ever_had_thyroid_d = dplyr::recode(ever_had_thyroid_d,
+                                            `2` = NA_character_),
+         race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.numeric(age_grp),
+         period = as.factor(period)) %>% 
+  select(-X)
+
+seer_rf
+write.csv(seer_rf, "./seer_rf.csv")
+```
+
+
+
+
+
+## protein
+
+```{r echo=FALSE, message=FALSE}
+
+protcts = nhanes_nhes%>% filter(race %in% c("White", "Black", "Other"),
+                      gender %in% c("Male", "Female"),
+                      age_grp %in% c(0:9)) %>% 
+  mutate(period = as.numeric(period),
+                   age_grp = as.factor(age_grp)) %>%   
+  group_by(race, gender, age_grp, period) %>% 
+  filter(between(protein,0,300),
+                 between(tot_sat_fat, 0, 300),
+                 between(fat, 0, 300)) %>% 
+  summarize(weightedprot2 = weighted.mean(protein, weight))
+
+protcts %>% 
+ggplot(aes(x=period, weightedprot2, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "averaged weighted means of protein from 1985-2018 among 0-49 year olds",
+       y = "weighted mean for ghp%") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+
+
+## fat
+```{r echo=FALSE, message=FALSE}
+fatcts = nhanes_nhes%>% filter(race %in% c("White", "Black", "Other"),
+                      gender %in% c("Male", "Female"),
+  age_grp %in% c(0:9)) %>% 
+  mutate(period = as.numeric(period),
+                   age_grp = as.factor(age_grp)) %>%   
+  group_by(race, gender, age_grp, period) %>% 
+  filter(between(protein,0,300),
+                 between(tot_sat_fat, 0, 300),
+                 between(fat, 0, 300)) %>% 
+  summarize(weightedfat2 = weighted.mean(fat, weight))
+
+fatcts%>% 
+ggplot(aes(x=period, weightedfat2, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "averaged weighted means of fat from 1985-2018 among 0-49 year olds",
+       y = "weighted mean for ghp%") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+
+## saturated fat
+```{r echo=FALSE, message=FALSE}
+satfatcts = nhanes_nhes%>% filter(race %in% c("White", "Black", "Other"),
+                      gender %in% c("Male", "Female"),
+  age_grp %in% c(0:9)) %>% 
+  mutate(period = as.numeric(period),
+                   age_grp = as.factor(age_grp)) %>%   
+  group_by(race, gender, age_grp, period) %>% 
+  filter(between(protein,0,300),
+                 between(tot_sat_fat, 0, 300),
+                 between(fat, 0, 300)) %>% 
+  summarize(weightedsatfat2 = weighted.mean(tot_sat_fat, weight))
+
+satfatcts %>% 
+ggplot(aes(x=period, weightedsatfat2, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "averaged weighted means of sat fat from 1985-2018 among 0-49 year olds",
+       y = "weighted mean for sat fat") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+
+## sugar
+```{r}
+nhanes_nhes%>% filter(race %in% c("White", "Black", "Other"),
+                      gender %in% c("Male", "Female"),
+  age_grp %in% c(0:9)) %>% 
+  mutate(period = as.numeric(period),
+                   age_grp = as.factor(age_grp)) %>%   
+  group_by(race, gender, age_grp, period) %>% 
+  filter(between(protein,0,300),
+                 between(tot_sat_fat, 0, 300),
+                 between(fat, 0, 300),
+         between(sugar, 0, 300)) %>% 
+  summarize(weightedsug2 = weighted.mean(sugar, weight))%>% 
+ggplot(aes(x=period, weightedsug2, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "averaged weighted means of sugar from 1985-2018 among 0-49 year olds",
+       y = "weighted mean for sugar") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+
+## cholesterol
+```{r echo=FALSE, message=FALSE}
+cholcts = nhanes_nhes%>% filter(race %in% c("White", "Black", "Other"),
+                      gender %in% c("Male", "Female"),
+  age_grp %in% c(0:9)) %>% 
+  mutate(period = as.numeric(period),
+                   age_grp = as.factor(age_grp)) %>%   
+  group_by(race, gender, age_grp, period) %>% 
+  filter(between(protein,0,300),
+                 between(tot_sat_fat, 0, 300),
+                 between(fat, 0, 300)) %>% 
+  summarize(weightedchol2 = weighted.mean(cholesterol, weight))
+
+cholcts %>% 
+ggplot(aes(x=period, weightedchol2, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "averaged weighted means of cholesterol from 1985-2018 among 0-49 year olds",
+       y = "weighted mean for chol") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+
+## fiber 
+```{r echo=FALSE, message=FALSE}
+fibcts = nhanes_nhes%>% filter(race %in% c("White", "Black", "Other"),
+                      gender %in% c("Male", "Female"),
+  age_grp %in% c(0:9)) %>% 
+  mutate(period = as.numeric(period),
+                   age_grp = as.factor(age_grp)) %>%   
+  group_by(race, gender, age_grp, period) %>% 
+  filter(between(protein,0,300),
+                 between(tot_sat_fat, 0, 300),
+                 between(fat, 0, 300)) %>% 
+  summarize(weightedfib2 = weighted.mean(fiber, weight))
+
+fibcts %>% 
+ggplot(aes(x=period, weightedfib2, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "averaged weighted means of fiber from 1985-2018 among 0-49 year olds",
+       y = "weighted mean for fiber") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+
+
+## subset diabetes nhis+nhanes/nhes
+```{r, include=FALSE}
+s = nhisx %>% 
+  dplyr::select(age_grp, period, race, gender, weight, psu, strata, bmi)
+
+t = nhanes_nhes%>% 
+  dplyr::select(age_grp, period, race, gender, weight, psu, strata, bmi)
+
+bmiall = rbind(s,t)
+#write.csv(bmiall, "./bmiall_10_5.csv")
+
+
+bmiall %>%  filter(race %in% c("White", "Black", "Other"),
+                      gender %in% c("Male", "Female"),
+  age_grp %in% c(0:9)) %>% 
+  mutate(period = as.numeric(period),
+                   age_grp = as.factor(age_grp)) %>%   
+  group_by(race, gender, age_grp, period) %>% 
+  filter(
+         between(bmi, 10, 50)) %>% 
+  summarize(weightedbmi = weighted.mean(bmi, weight))%>% 
+ggplot(aes(x=period, weightedbmi, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "averaged weighted means of bmi from 1985-2018 among 0-49 year olds",
+       y = "weighted mean for bmi") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+
+## overweight
+```{r, echo=FALSE, message=FALSE}
+over = read_xlsx("./bmi_means.xlsx", sheet = 40) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49")) %>% 
+  filter(race %in% c("White", "Black", "Other"))
+
+over  %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of overweight
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+## obese
+```{r echo=FALSE, message=FALSE}
+ obe = read_xlsx("./bmi_means.xlsx", sheet = 41) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49")) %>% 
+  filter(race %in% c("White", "Black", "Other"))
+
+obe  %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of obese
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+
+## subset diabetes nhis+nhanes/nhis
+```{r echo=FALSE, message=FALSE}
+u = nhisx %>% 
+  dplyr::select(age_grp, period, race, gender, weight, psu, strata, diabetes) %>% mutate(age_grp = as.numeric(age_grp)) 
+
+v = nhanes_nhes%>% 
+  dplyr::select(age_grp, period, race, gender, weight, psu, strata, diabetes)%>% mutate(age_grp = as.numeric(age_grp)) %>% 
+  filter(age_grp %in% c(0:9))
+
+diabetesall = rbind(u,v)
+
+dia = read_xlsx("./bmi_means.xlsx", sheet = 42) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+dia  %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means for diabetes = yes
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+```
+
+## subset thyroid
+```{r echo=FALSE, message=FALSE}
+w = nhisx %>% 
+  dplyr::select(age_grp, period, race, gender, weight, psu, strata, ever_had_thyroid_d) %>% mutate(age_grp = as.numeric(age_grp)) 
+
+x = nhanes_nhes%>% 
+  dplyr::select(age_grp, period, race, gender, weight, psu, strata, ever_had_thyroid_d)%>% mutate(age_grp = as.numeric(age_grp)) %>% 
+  filter(age_grp %in% c(0:9))
+
+thyall = rbind(w,x)
+
+thy = read_xlsx("./bmi_means.xlsx", sheet = 44) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+thy  %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of ever had thyroid disease = yes
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+## hbp
+```{r message=FALSE, echo=FALSE}
+y = nhisx %>% 
+  dplyr::select(age_grp, period, race, gender, weight, psu, strata,hbp) %>% mutate(age_grp = as.numeric(age_grp)) 
+
+z = nhanes_nhes%>% 
+  dplyr::select(age_grp, period, race, gender, weight, psu, strata, hbp)%>% mutate(age_grp = as.numeric(age_grp)) %>% 
+  filter(age_grp %in% c(0:9))
+
+hbpall = rbind(y,z)
+#write.csv(hbpall, "./hbp_10_5.csv")
+
+hbpmean = read_xlsx("./bmi_means.xlsx", sheet = 43) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+hbpmean  %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of ever had hbp = yes
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+## tertiles for fat, sat fat, protein, fiber & cholesterol
+```{r fat, echo=FALSE, message=FALSE}
+fattert =  read_xlsx("./bmi_means.xlsx", sheet = 45) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+fattert  %>% filter(VarLevel == 1) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of fat tertile 1
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+fattert  %>% filter(VarLevel == 2) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of fat tertile 2
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+fat1 = fattert  %>% filter(VarLevel == 1) %>% 
+  rename(fat1mean = Mean) %>% 
+  dplyr::select(-VarLevel)
+fat2 = fattert %>% filter(VarLevel == 2)%>% 
+  rename(fat2mean = Mean)%>% 
+  dplyr::select(-VarLevel)
+```
+
+```{r sat.fat, echo=FALSE, message=FALSE}
+satfattert =  read_xlsx("./bmi_means.xlsx", sheet = 46) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+satfattert  %>% filter(VarLevel == 1) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of sat fat tertile 1
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+satfattert  %>% filter(VarLevel == 2) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of sat fat tertile 2
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+satfat1 = satfattert  %>% filter(VarLevel == 1) %>% 
+  rename(satfat1mean = Mean) %>% 
+  dplyr::select(-VarLevel)
+satfat2 = satfattert %>% filter(VarLevel == 2)%>% 
+  rename(satfat2mean = Mean)%>% 
+  dplyr::select(-VarLevel)
+```
+
+
+```{r fiber, echo=FALSE, message=FALSE}
+fibtert =  read_xlsx("./bmi_means.xlsx", sheet = 47) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+fibtert  %>% filter(VarLevel == 1) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of fiber tertile 1
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+fibtert  %>% filter(VarLevel == 2) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of fiber tertile 2
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+fiber1 = fibtert  %>% filter(VarLevel == 1) %>% 
+  rename(fiber1mean = Mean) %>% 
+  dplyr::select(-VarLevel)
+fiber2 = fibtert %>% filter(VarLevel == 2)%>% 
+  rename(fiber2mean = Mean)%>% 
+  dplyr::select(-VarLevel)
+```
+
+```{r protein, echo=FALSE, message=FALSE}
+prottert =  read_xlsx("./bmi_means.xlsx", sheet = 48) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+prottert  %>% filter(VarLevel == 1) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of protein tertile 1
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+prottert  %>% filter(VarLevel == 2) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of protein tertile 2
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+prot1 = prottert  %>% filter(VarLevel == 1) %>% 
+  rename(protein1mean = Mean) %>% 
+  dplyr::select(-VarLevel)
+prot2 = prottert  %>% filter(VarLevel == 2)%>% 
+  rename(protein2mean = Mean)%>% 
+  dplyr::select(-VarLevel)
+```
+
+```{r cholesterol, echo=FALSE, message=FALSE}
+choltert =  read_xlsx("./bmi_means.xlsx", sheet = 49) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+choltert  %>% filter(VarLevel == 1) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of chol tertile 1
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+choltert  %>% filter(VarLevel == 2) %>% 
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of chol tertile 2
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+chol1 = choltert  %>% filter(VarLevel == 1) %>% 
+  rename(chol1mean = Mean)%>% 
+  dplyr::select(-VarLevel)
+chol2 = choltert  %>% filter(VarLevel == 2)%>% 
+  rename(chol2mean = Mean)%>% 
+  dplyr::select(-VarLevel)
+```
+
+## smoking
+```{r current.smokers, echo=FALSE, message=FALSE}
+##current smokers 
+smkhis = nhisx %>% 
+  select(age_grp, period, race, gender, current_smoker, weight, psu, strata) %>% 
+  mutate(current_smoker = as.factor(current_smoker),
+         current_smoker = dplyr::recode(current_smoker,
+                                        `0` = "No",
+                                        `1` = "Yes",
+                                        `2` = "Yes",
+                                        `3` = "Yes"))
+
+smkhanes = nhanes_nhes%>% 
+  select(age_grp, period, race, gender, current_smoker, weight, psu, strata)%>% 
+  mutate(current_smoker = as.factor(current_smoker),
+         current_smoker = dplyr::recode(current_smoker,
+                                        `0` = "No",
+                                        `1` = "Yes",
+                                        `2` = "Yes"))
+
+smkr = rbind(smkhanes, smkhis)
+
+ csmkr =  read_xlsx("./bmi_means.xlsx", sheet = 51) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+csmkr  %>%  
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of proportion of current smokers 
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+```
+
+## home smokers 
+```{r home.smokers, echo=FALSE, message=FALSE}
+ hsmkr =  read_xlsx("./bmi_means.xlsx", sheet = 50) %>% filter(age_grp %in% c(0:9)) %>% 
+  mutate(race = as.factor(race),
+         gender = as.factor(gender),
+         age_grp = as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49"))
+
+hsmkr  %>%  
+  ggplot( aes(x = period, y = Mean))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of proportion of current smokers 
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+## ghp 
+```{r ghp, echo=FALSE, message=FALSE}
+ghp = nhanes_nhes %>% 
+  filter(age_grp %in% c(5:9)) %>%  
+  mutate(age_grp = as.factor(age_grp),
+                     age_grp = dplyr::recode(age_grp,
+                                      `5` = "25-29",
+                                      `6` = "30-34",
+                                      `7` = "35-39",
+                                      `8` = "40-44",
+                                      `9` = "45-49"),
+                    avg_drinks_per_day_pastyr = as.numeric(avg_drinks_per_day_pastyr)) %>%  
+  group_by(race, gender, age_grp, period) %>% filter(between(ghp, 0, 20)) %>% 
+  summarize(weightedghp = weighted.mean(ghp, weight, na.rm = TRUE))
+
+ghp %>% 
+ggplot(aes(x=period, weightedghp, color=age_grp))+
+  geom_line()+
+  facet_wrap(~gender+race, scales = "free_y")+
+  labs(title = "averaged weighted means of ghp from 1999-2018 among 0-49 year olds",
+       y = "weighted mean for ghp%") +  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+## regression
+```{r include=FALSE}
+seer
+hsmkr = hsmkr %>% 
+  rename(homesmoker = Mean)
+csmkr = csmkr%>% 
+  rename(currentsmoker = Mean)
+obe = obe %>% 
+  rename(obese = Mean)
+over = over %>% 
+  rename(overweight = Mean)
+thy = thy %>% 
+  rename(thyroid_d = Mean)
+dia = dia %>% 
+  rename(diabetes = Mean)
+hbpmean = hbpmean %>% 
+  rename(hbp = Mean)
+ghp
+fat1
+fat2
+satfat1
+satfat2
+prot1
+prot2
+fiber1
+fiber2
+chol1
+chol2
+#write.csv(fibcts, "./fibcts.csv")
+ctsfib = read.csv("./fibcts.csv")
+ctsfib = ctsfib %>% 
+  mutate(age_grp= as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49")) %>% 
+  rename(weightedfibcts = weightedfib2) %>% 
+  dplyr::select(-X)
+
+
+#write.csv(fatcts, "./fatcts.csv")
+ctsfat = read.csv("./fatcts.csv")
+ctsfat = ctsfat %>% 
+  mutate(age_grp= as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49")) %>% 
+  rename(weightedfatcts = weightedfat2) %>% 
+  dplyr::select(-X)
+
+
+write.csv(satfatcts, "./satfatcts.csv")
+ctssatfat = read.csv("./satfatcts.csv")
+ctssatfat = ctssatfat %>% 
+  mutate(age_grp= as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49")) %>% 
+  rename(weightedsatfatcts = weightedsatfat2) %>% 
+  dplyr::select(-X)
+
+write.csv(protcts, "./protcts.csv")
+ctsprot = read.csv("./protcts.csv")
+ctsprot = ctsprot %>% 
+  mutate(age_grp= as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49")) %>% 
+  rename(weightedprotcts = weightedprot2) %>% 
+  dplyr::select(-X)
+
+#write.csv(cholcts, "./cholcts.csv")
+ctschol = read.csv("./cholcts.csv")
+ctschol = ctschol %>% 
+  mutate(age_grp= as.factor(age_grp),
+         age_grp = dplyr::recode(age_grp,
+                                 `0` = "0-4",
+                                  `1` = "5-9",
+                                  `2` = "10-14",
+                                  `3` = "15-19",
+                                  `4` = "20-24",
+                                  `5` = "25-29",
+                                  `6` = "30-34",
+                                  `7` = "35-39",
+                                  `8` = "40-44",
+                                  `9` = "45-49")) %>% 
+  rename(weightedcholcts = weightedchol2) %>% 
+  dplyr::select(-X)
+
+
+
+## merging weighted means of rf
+a = full_join(hsmkr, csmkr,  by = c("period", "age_grp", "race", "gender"))
+b = full_join(obe, over, by = c("period", "age_grp", "race", "gender"))
+c = full_join(thy, dia, by = c("period", "age_grp", "race", "gender"))
+d = full_join(hbpmean, ghp, by = c("period", "age_grp", "race", "gender"))
+e = full_join(fat1, fat2, by = c("period", "age_grp", "race", "gender"))
+f = full_join(satfat1, satfat2, by = c("period", "age_grp", "race", "gender"))
+g = full_join(prot1, prot2, by = c("period", "age_grp", "race", "gender"))
+h = full_join(fiber1, fiber2, by = c("period", "age_grp", "race", "gender"))
+i = full_join(chol1, chol2, by = c("period", "age_grp", "race", "gender"))
+
+j = full_join(a,b, by = c("period", "age_grp", "race", "gender"))
+k = full_join(c,d, by = c("period", "age_grp", "race", "gender"))
+l = full_join(e,f, by = c("period", "age_grp", "race", "gender"))
+m = full_join(g,h, by = c("period", "age_grp", "race", "gender"))
+
+n = full_join(j,k, by = c("period", "age_grp", "race", "gender"))
+o = full_join(l,m, by = c("period", "age_grp", "race", "gender"))
+
+p = full_join(n,o, by = c("period", "age_grp", "race", "gender"))
+
+q = full_join(p,i, by = c("period", "age_grp", "race", "gender"))%>% 
+  mutate(age_grp = dplyr::recode(age_grp,
+                                 `0-4` = 0,
+                                 `5-9` = 1,
+                                 `10-14` = 2,
+                                `15-19` = 3,
+                                `20-24` = 4,
+                                `25-29` = 5,
+                                `30-34` = 6,
+                                `35-39` = 7,
+                                `40-44` = 8,
+                                `45-49` = 9),
+         age_grp = as.factor(age_grp),
+         race = as.factor(race),
+         gender = as.factor(gender))
+
+s = full_join(ctsfib, ctsprot, by = c("period", "age_grp", "race", "gender"))
+t = full_join(ctsfat, ctssatfat, by = c("period", "age_grp", "race", "gender"))
+u = full_join(s,t , by = c("period", "age_grp", "race", "gender"))
+v = full_join(u, ctschol , by = c("period", "age_grp", "race", "gender"))%>% 
+  mutate(age_grp = as.numeric(age_grp),
+         race = as.factor(race),
+         gender = as.factor(gender),
+         period = as.factor(period))
+
+seer = seer %>% mutate(age_grp = dplyr::recode(age_grp,
+                                        `6` = "5",
+                                        `7` = "6",
+                                        `8` = "7",
+                                        `9` = "8",
+                                        `10` = "9"))
+
+### rf with seer
+r = full_join(seer, q, by = c("period", "age_grp", "race", "gender")) %>% 
+  mutate(age_grp = as.numeric(age_grp),
+         race = as.factor(race),
+         gender = as.factor(gender),
+         period = as.factor(period)) %>% 
+  dplyr::select(-X)
+
+w = full_join(r, v, by = c("period", "age_grp", "race", "gender")) %>% 
+  mutate(period = as.factor(period))
+
+write.csv(w, "./seer_rf_10-6.csv")
+```
+
+```{r include=FALSE}
+w %>%  mutate(period = as.numeric(period),
+              age_grp = as.factor(age_grp)) %>% 
+  ggplot( aes(x = period, y = diabetes))+
+   geom_line(aes(color = age_grp )) + 
+  facet_wrap(~gender+race,  scales = "free_y")+
+  labs(
+ title = "weighted means of proportion of current smokers 
+ among 0-49 year olds by race & gender",
+    x = "Periods (5-year groups)",
+    y = "weighted mean",
+    caption = "by 5-year age groups (25-49)")+  scale_x_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10,11),
+  labels=c(`0` = "1960-1964",`1` = "1965-1969",
+           `2` = "1970-1974",`3` = "1975-1979",`4` = "1980-1984", `5` = "1985-1989", `6`= "1990-1994",
+           `7` = "1995-1999", `8` = "2000-2004", `9` = "2005-2009", `10` = "2010-2014", `11` = "2015-2018"))+
+   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
